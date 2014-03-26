@@ -1,10 +1,9 @@
 #include "mesh.h"
-// #define DIM 2
 #define __MESH_DEBUG
 
 int Mesh::initElement(MyProblem prob, std::string filename)
 {
-	std::ifstream fin(filename + ".ele");
+	std::ifstream fin((filename + ".ele").c_str());
 
 	int numEle, numNode, numAttr;
 	fin >> numEle >> numNode >> numAttr;
@@ -25,7 +24,6 @@ int Mesh::initElement(MyProblem prob, std::string filename)
 		for(int j = 0; j < prob.dimension + 1; j++){
 			fin >> tempVertex;
 			it -> vertex[j] = tempVertex;
-			// edge[tempVertex - 1].neighborElement.push_back(it -> index);
 		}
 		it -> detBE = 0;
 	}
@@ -34,7 +32,7 @@ int Mesh::initElement(MyProblem prob, std::string filename)
 
 int Mesh::initEdge(MyProblem prob, std::string filename)
 {
-	std::ifstream fin(filename + ".edge");
+	std::ifstream fin((filename + ".edge").c_str());
 
 	int numEdge, numBound;
 	fin >> numEdge >> numBound;
@@ -54,7 +52,7 @@ int Mesh::initEdge(MyProblem prob, std::string filename)
 int Mesh::initVertex(MyProblem prob, std::string filename)
 {
 	int numVer, dim, numAttr, numBound;
-	std::ifstream fin(filename + ".node");
+	std::ifstream fin((filename + ".node").c_str());
 	fin >> numVer >> dim >> numAttr >> numBound;
 
 	if( dim != prob.dimension){
@@ -105,19 +103,19 @@ int Mesh::initMesh(MyProblem prob)
 	std::cout << "start initializing mesh" << std::endl;
 #endif
 
-	if(initEdge(prob, "square.1") == 1)
+	if(initEdge(prob, "dat/square.1") == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " edge initilized" << std::endl;
 #endif
 
-	if(initElement(prob, "square.1") == 1)
+	if(initElement(prob, "dat/square.1") == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " element initilized" << std::endl;
 #endif
 
-	if(initVertex(prob, "square.1") == 1)
+	if(initVertex(prob, "dat/square.1") == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " vertex initilized" << std::endl;
@@ -125,7 +123,7 @@ int Mesh::initMesh(MyProblem prob)
 	// findElementEdge();
 
 #ifdef __MESH_DEBUG
-	std::cout << "finish initializing mesh" << std::endl;
+	std::cout << "finish initializing mesh" << std::endl << std::endl;
 #endif
 
 	return 0;
