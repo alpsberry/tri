@@ -4,7 +4,7 @@ int consoleOutput(Mesh mesh, MySolvingSystem solSys)
 {
 	std::vector<Vertex>::iterator it;
 	int k;
-	for(k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++, k++)
+	for(k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++)
 		if(it -> bctype == 0)
 		{
 			std::cout << it -> x << " " << it -> y << " " << solSys.x[k++] << std::endl;
@@ -15,11 +15,11 @@ int consoleOutput(Mesh mesh, MySolvingSystem solSys)
 
 int fileOutput(Mesh mesh, MySolvingSystem solSys)
 {
-	std::ofstream fout("square.1.output");
+	std::ofstream fout("dat/square.1.output");
 
 	std::vector<Vertex>::iterator it;
 	int k;
-	for(k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++, k++)
+	for(k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++)
 		if(it -> bctype == 0)
 		{
 			fout << it -> x << " " << it -> y << " " << solSys.x[k++] << std::endl;
@@ -30,7 +30,7 @@ int fileOutput(Mesh mesh, MySolvingSystem solSys)
 
 int fileOutputRH(Mesh mesh, MySolvingSystem solSys)
 {
-	std::ofstream fout("square.1.rh");
+	std::ofstream fout("dat/square.1.rh");
 
 	for(int i = 0; i < mesh.kidof; i++)
 		fout << solSys.rh[i] << std::endl;
@@ -40,7 +40,7 @@ int fileOutputRH(Mesh mesh, MySolvingSystem solSys)
 
 int fileOutputMA(Mesh mesh, MySolvingSystem solSys)
 {
-	std::ofstream fout("square.1.ma");
+	std::ofstream fout("dat/square.1.ma");
 
 	for(int i = 0; i < solSys.ma.size() + 1; i++)
 		fout << solSys.Ap[i] << " ";
@@ -64,7 +64,7 @@ int fileOutputMA(Mesh mesh, MySolvingSystem solSys)
 
 int fileOutputTriplet(Mesh mesh, MySolvingSystem solSys)
 {
-	std::ofstream fout("square.1.triplet");
+	std::ofstream fout("dat/square.1.triplet");
 
 	std::vector< std::list<maColEle> >::iterator it;
 	std::list<maColEle>::iterator it1;
