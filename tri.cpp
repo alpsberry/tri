@@ -1,4 +1,4 @@
-// tri 0.01 Mar. 17
+// tri 0.02 Mar. 26
 #include "tri.h"
 
 int main(int argc, char const *argv[])
@@ -15,6 +15,7 @@ int main(int argc, char const *argv[])
 	solSys.assembleStiff(mesh, prob);
 	solSys.convertToUMF(mesh);
 	solSys.UMFSolve(mesh);
+	// solSys.SuperLUSolve(mesh);
 
 	// consoleOutput(mesh, solSys);
 	fileOutput(mesh, solSys);
