@@ -10,10 +10,6 @@
 class Mesh : public Region
 {
 public:
-	// std::vector<Element> element;
-	// std::vector<Edge> edge;
-	// std::vector<Vertex> vertex;
-	// std::vector<int> verOffset;
 	int kidof;
 	int kbdof;
 	Mesh(){
