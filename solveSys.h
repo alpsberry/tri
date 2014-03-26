@@ -4,9 +4,10 @@
 #include <ctime>
 #include <vector>
 #include <list>
-// #include "SuiteSparse_config/SuiteSparse_config.h"
 #include "umfpack.h"
 #include "mesh.h"
+#include "../SuperLU_4.3/SRC/slu_ddefs.h"
+
 
 struct maColEle
 {
@@ -39,11 +40,18 @@ public:
 
 	int UMFSolve(Mesh mesh);
 
-	int addToMA(double a, int row, int col);
+	int SuperLUSolve(Mesh mesh);
 
+	int addToMA(double a, int row, int col);
+	
+	// ~BasicSolvingSystem() {} //need to deal with rh, ma, Ap... ?
 };
 
-
+// the problem to be solved here is
+//   -\Delta u + u = 3\cos x \sin y, (x,y) \in \Omega = [\frac{\pi}{2}, \frac{3\pi}{2}] \times [0, \pi]
+//   u = 0, (x,y) \in \Gamma
+// the variational form
+//   \int\nolimits_{\Omega} \nabla u \nabla v + uv = \int\nolimits_{\Omega} fv
 class MySolvingSystem: public BasicSolvingSystem
 {
 public:
@@ -54,12 +62,6 @@ public:
 	int getStiff(Element& ele, Mesh& mesh, MyProblem prob);
 
 	int assembleStiff(Mesh &mesh, MyProblem prob);
-
-	~MySolvingSystem()
-	{
-		// delete [] rh;
-		//need to deal with ma
-	}
 };
 
 #endif

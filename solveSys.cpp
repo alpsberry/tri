@@ -39,7 +39,7 @@ int BasicSolvingSystem::convertToUMF(Mesh mesh)
 		}
 
 #ifdef __SOLVESYS_DEBUG
-	std::cout << "finish converting to UMFPACK structure" << std::endl;
+	std::cout << "finish converting to UMFPACK structure" << std::endl << std::endl;
 #endif
 
 	return 0;
@@ -62,15 +62,67 @@ int BasicSolvingSystem::UMFSolve(Mesh mesh)
 	umfpack_di_free_numeric (&Numeric) ;
 
 #ifdef __SOLVESYS_DEBUG
-	std::cout << "finish solving with UMFPACK" << std::endl;
+	std::cout << "finish solving with UMFPACK" << std::endl << std::endl;
 #endif		
 
 #ifdef __SOLVESYS_DEBUG_LV2
 	for(int i = 0; i < mesh.kidof; i++)
 	{
-		std::cout << " x[" << i << "] = " << x[i] << std::endl;
+		std::cout << " x[" << i << "] = " << x[i] << std::endl << std::endl;
 	}
 #endif
+	return 0;
+}
+
+int BasicSolvingSystem::SuperLUSolve(Mesh mesh)
+{
+
+#ifdef __SOLVESYS_DEBUG
+	std::cout << "start solving with SuperLU" << std::endl;
+#endif
+
+	superlu_options_t options;
+	set_default_options(&options);
+
+	int nnz = Ap[mesh.kidof]; 
+
+	SuperMatrix A, B;
+	dCreate_CompCol_Matrix(&A, mesh.kidof, mesh.kidof, nnz, Ax, Ai, Ap, SLU_NC, SLU_D, SLU_GE);
+	dCreate_Dense_Matrix(&B, mesh.kidof, 1, rh, mesh.kidof, SLU_DN, SLU_D, SLU_GE);
+
+	set_default_options(&options);  
+    options.ColPerm = NATURAL; 
+
+    int      *perm_c; /* column permutation vector */
+    int      *perm_r; /* row permutations from partial pivoting */
+	if ( !(perm_c = intMalloc(mesh.kidof)) ) ABORT("Malloc fails for perm_c[].");
+    if ( !(perm_r = intMalloc(mesh.kidof)) ) ABORT("Malloc fails for perm_r[].");
+
+    SuperMatrix L, U;
+    int info;
+    SuperLUStat_t stat;
+    StatInit(&stat);
+
+    dgssv(&options, &A, perm_c, perm_r, &L, &U, &B, &stat, &info);
+    
+    double *sol = (double*) ((DNformat*) B.Store)->nzval;
+	x = new double [mesh.kidof];
+    memcpy(x, sol, mesh.kidof * sizeof(double));
+
+    StatFree(&stat);
+
+    SUPERLU_FREE (rh);
+    SUPERLU_FREE (perm_r);
+    SUPERLU_FREE (perm_c);
+    Destroy_CompCol_Matrix(&A);
+    Destroy_SuperMatrix_Store(&B);
+    Destroy_SuperNode_Matrix(&L);
+    Destroy_CompCol_Matrix(&U); 
+
+#ifdef __SOLVESYS_DEBUG
+	std::cout << "finish solving with SuperLU" << std::endl << std::endl;
+#endif	
+
 	return 0;
 }
 
@@ -95,13 +147,14 @@ int BasicSolvingSystem::addToMA(double a, int row, int col)
 	return 0;
 }
 
+// gradInteg = \int_E \nabla \phi_i \nabla v
+// timeInteg = \int_E uv
+// nodal basis are used here
 double MySolvingSystem::integA(Element &ele, Mesh mesh, int vi, int vj, MyProblem prob)
 {
 	if(vi > vj)
 		std::swap(vi, vj);
 
-	// if(ele.vertex.size() != 3)
-		// return -1;
 	double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
 		   x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
 		   x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
@@ -143,6 +196,9 @@ double MySolvingSystem::integA(Element &ele, Mesh mesh, int vi, int vj, MyProble
 	return gradInteg + timeInteg;
 }
 
+// calc \int_E f\phi
+// \int_E f\phi = |detB_E| / 6 * (\sum_{i=1}^3 f(m_i)\phi(m_i))
+// where m_i is the midpoint of each edge
 double MySolvingSystem::integARH(Element ele, Mesh mesh, int vi, MyProblem prob)
 {
 	double x1(mesh.vertex[ele.vertex[vi] - 1].x), y1(mesh.vertex[ele.vertex[vi] - 1].y);
@@ -158,11 +214,11 @@ double MySolvingSystem::integARH(Element ele, Mesh mesh, int vi, MyProblem prob)
 }
 
 int MySolvingSystem::getStiff(Element& ele, Mesh& mesh, MyProblem prob){
-	double a, b;
 
 #ifdef __SOLVESYS_DEBUG_LV2
 	std::cout << " assemble element " << ele.index << std::endl;
 #endif	
+
 	for(int i = 0; i < ele.vertex.size(); i++){
 		if(mesh.vertex[ele.vertex[i] - 1].bctype > 0)
 			continue;
@@ -170,14 +226,14 @@ int MySolvingSystem::getStiff(Element& ele, Mesh& mesh, MyProblem prob){
 		{
 			if(mesh.vertex[ele.vertex[j] - 1].bctype > 0)
 				continue;
-			a = integA(ele, mesh, i, j, prob);
-			addToMA(a, mesh.vertex[ele.vertex[i] - 1].index - 1,
+			double valIntegA = integA(ele, mesh, i, j, prob);
+			addToMA(valIntegA, mesh.vertex[ele.vertex[i] - 1].index - 1,
 				mesh.vertex[ele.vertex[j] - 1].index - 1);
 
 #ifdef __SOLVESYS_DEBUG_LV2
 				std::cout << "  global " << ele.vertex[i] << " local " << i
 						  << " and global " << ele.vertex[j] << " local " << j
-						  << " integ = " << a << std::endl;
+						  << " integ = " << valIntegA << std::endl;
 #endif
 
 		}
@@ -185,13 +241,13 @@ int MySolvingSystem::getStiff(Element& ele, Mesh& mesh, MyProblem prob){
 	for(int i = 0; i < ele.vertex.size(); i++){
 		if(mesh.vertex[ele.vertex[i] - 1].bctype > 0)
 			continue;
-		b = integARH(ele, mesh, i, prob);
-		rh[mesh.vertex[ele.vertex[i] - 1].index - 1] += b;
+		double valIntegARH = integARH(ele, mesh, i, prob);
+		rh[mesh.vertex[ele.vertex[i] - 1].index - 1] += valIntegARH;
 
 #ifdef __SOLVESYS_DEBUG_LV2
 		std::cout << "  global " << ele.vertex[i] << " local " << i
-				  << " rh" << ele.vertex[i] - mesh.verOffset[ele.vertex[i]] - 1
-				  << "= " << b << std::endl;
+				  << " rh" << mesh.vertex[ele.vertex[i] - 1].index - 1
+				  << "= " << valIntegARH << std::endl;
 #endif
 	}
 	return 0;
@@ -202,7 +258,7 @@ int MySolvingSystem::assembleStiff(Mesh &mesh, MyProblem prob)
 
 #ifdef __SOLVESYS_DEBUG
 	std::cout << "start forming system, kidof = " << mesh.kidof << std::endl;
-#endif	
+#endif
 	clock_t t = clock();
 
 	rh = new double [mesh.kidof];
@@ -220,7 +276,7 @@ int MySolvingSystem::assembleStiff(Mesh &mesh, MyProblem prob)
 #ifdef __SOLVESYS_DEBUG
 	std::cout << "finish forming system, t = "
 			  << (double) t / CLOCKS_PER_SEC << "s"
-			  << std::endl;
+			  << std::endl << std::endl;
 #endif	
 
 #ifdef __SOLVESYS_DEBUG_LV2
