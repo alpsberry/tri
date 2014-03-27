@@ -16,11 +16,11 @@ public:
 		kidof = 0;
 		kbdof = 0;
 	}
-	int initElement(MyProblem prob, std::string filename);
+	int initElement(MyProblem prob);
 
-	int initEdge(MyProblem prob, std::string filename);
+	int initEdge(MyProblem prob);
 
-	int initVertex(MyProblem prob, std::string filename);
+	int initVertex(MyProblem prob);
 
 	// void findElementEdge();
 

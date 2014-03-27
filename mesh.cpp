@@ -1,16 +1,20 @@
 #include "mesh.h"
 #define __MESH_DEBUG
 
-int Mesh::initElement(MyProblem prob, std::string filename)
+int Mesh::initElement(MyProblem prob)
 {
-	std::ifstream fin((filename + ".ele").c_str());
+	std::ifstream fin((prob.parameters.meshFilename + ".ele").c_str());
+		if(!fin){
+		std::cout << "error opening " << prob.parameters.meshFilename + ".ele" << std::endl;
+		return 1;
+	}
 
 	int numEle, numNode, numAttr;
 	fin >> numEle >> numNode >> numAttr;
 
 	if( numNode != prob.dimension + 1){
 		std::cerr << "dimension does not match in "
-			      << filename << std::endl;
+			      << prob.parameters.meshFilename << std::endl;
 		return 1;
 	}
 
@@ -30,9 +34,13 @@ int Mesh::initElement(MyProblem prob, std::string filename)
 	return 0;
 }
 
-int Mesh::initEdge(MyProblem prob, std::string filename)
+int Mesh::initEdge(MyProblem prob)
 {
-	std::ifstream fin((filename + ".edge").c_str());
+	std::ifstream fin((prob.parameters.meshFilename + ".edge").c_str());
+	if(!fin){
+		std::cout << "error opening " << prob.parameters.meshFilename + ".edge" << std::endl;
+		return 1;
+	}
 
 	int numEdge, numBound;
 	fin >> numEdge >> numBound;
@@ -49,15 +57,20 @@ int Mesh::initEdge(MyProblem prob, std::string filename)
 	return 0;
 }
 
-int Mesh::initVertex(MyProblem prob, std::string filename)
+int Mesh::initVertex(MyProblem prob)
 {
 	int numVer, dim, numAttr, numBound;
-	std::ifstream fin((filename + ".node").c_str());
+	std::ifstream fin((prob.parameters.meshFilename + ".node").c_str());
+	if(!fin){
+		std::cout << "error opening " << prob.parameters.meshFilename + ".node" << std::endl;
+		return 1;
+	}
+
 	fin >> numVer >> dim >> numAttr >> numBound;
 
 	if( dim != prob.dimension){
 		std::cerr << "dimension does not match in "
-			      << filename << std::endl;
+			      << prob.parameters.meshFilename << std::endl;
 		return 1;
 	}
 
@@ -103,19 +116,19 @@ int Mesh::initMesh(MyProblem prob)
 	std::cout << "start initializing mesh" << std::endl;
 #endif
 
-	if(initEdge(prob, "dat/square.1") == 1)
+	if(initEdge(prob) == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " edge initilized" << std::endl;
 #endif
 
-	if(initElement(prob, "dat/square.1") == 1)
+	if(initElement(prob) == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " element initilized" << std::endl;
 #endif
 
-	if(initVertex(prob, "dat/square.1") == 1)
+	if(initVertex(prob) == 1)
 		return 1;
 #ifdef __MESH_DEBUG
 	std::cout << " vertex initilized" << std::endl;
