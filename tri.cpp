@@ -13,14 +13,8 @@ int main(int argc, char const *argv[])
 
 	MySolvingSystem solSys;
 	solSys.assembleStiff(mesh, prob);
-	solSys.convertToUMF(mesh);
-	solSys.UMFSolve(mesh);
-	// solSys.SuperLUSolve(mesh);
+	solSys.solveSparse(mesh, prob);
 
-	// consoleOutput(mesh, solSys);
-	fileOutput(mesh, solSys);
-	fileOutputMA(mesh, solSys);
-	fileOutputRH(mesh, solSys);
-	fileOutputTriplet(mesh, solSys);
+	triOutput(prob, mesh, solSys);
 	return 0;
 }
