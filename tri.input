@@ -1,0 +1,8 @@
+dat/square.1   # mesh filename
+2              # dimension
+0              # solving package, 0 for "UMFPACK" and 1 for "SuperLU"
+0              # output results in console
+1              # file output results, *.output
+1              # file output stiff matrix in compressed column form, *.ma
+1              # file output righ-hand side matrix, *.rh
+1              # file output stiff matrix in triplet form, *.triplet
