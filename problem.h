@@ -40,9 +40,7 @@ public:
 	std::vector<Vertex> vertex;
 };
 
-// namespace nSolPack{
 enum class SolPack {UMFPACK, SuperLU, Count};
-// }
 
 struct paramstruct
 {

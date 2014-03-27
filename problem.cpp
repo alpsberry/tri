@@ -30,15 +30,10 @@ int Problem::initProblem(int argc, char const *argv[])
 	int intSolPack;
 	fin >> intSolPack;
 	if(intSolPack < static_cast<int>(SolPack::Count))
-	// intSolPack = static_cast<std::underlying_type<SolPack>::type>(SolPack::SuperLU);
 		parameters.solPack = static_cast<SolPack>(intSolPack);
 	else
 		parameters.solPack = static_cast<SolPack>(DEFAULT_SOLVE_PACK);
-	// switch(intSolPack){
-	// 	case 0:{parameters.solPack = UMFPACK; break;}
-	// 	case 1:{parameters.solPack = SuperLU; break;}
-	// 	default:{parameters.solPack = DEFAULT_SOLVE_PACK; break;}
-	// }
+
 	std::getline(fin, tempStr);
 
 	fin >> parameters.printResults;
@@ -55,9 +50,6 @@ int Problem::initProblem(int argc, char const *argv[])
 
 	fin >> parameters.fprintTriplet;
 	std::getline(fin, tempStr);
-
-
-	// std::cout << parameters.meshFilename << std::endl << dimension << std::endl;
 
 	return 0;
 }
