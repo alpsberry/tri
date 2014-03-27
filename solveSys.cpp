@@ -1,5 +1,5 @@
 #define __SOLVESYS_DEBUG
-// #define __SOLVESYS_DEBUG_LV2
+// #define __SOLVESYS_DEBUG_LV2m
 
 #include "solveSys.h"
 
@@ -7,7 +7,20 @@ bool maCompareFunc(const maColEle t1, const maColEle t2){
 	return t1.row < t2.row;  
 } 
 
-int BasicSolvingSystem::convertToUMF(Mesh mesh)
+int BasicSolvingSystem::solveSparse(Mesh mesh, MyProblem prob)
+{
+	convertToCSC(mesh);
+	if(prob.parameters.solPack == SolPack::UMFPACK)
+		UMFSolve(mesh);
+	else
+		if (prob.parameters.solPack == SolPack::SuperLU)
+			SuperLUSolve(mesh);
+
+	return 0;
+}
+
+// convert the list-stored matrix to Compressed Sparse Column (CSC)
+int BasicSolvingSystem::convertToCSC(Mesh mesh)
 {
 #ifdef __SOLVESYS_DEBUG
 	std::cout << "start converting to UMFPACK structure" << std::endl;

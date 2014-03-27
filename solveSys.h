@@ -36,7 +36,9 @@ public:
 		return 0;
 	}
 
-	int convertToUMF(Mesh mesh);
+	int solveSparse(Mesh mesh, MyProblem prob);
+
+	int convertToCSC(Mesh mesh);
 
 	int UMFSolve(Mesh mesh);
 
