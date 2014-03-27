@@ -13,4 +13,6 @@ int fileOutputMA(Mesh mesh, MySolvingSystem solSys);
 
 int fileOutputTriplet(Mesh mesh, MySolvingSystem solSys);
 
+int triOutput(MyProblem prob, Mesh mesh, MySolvingSystem solSys);
+
 #endif /* TRI_UTIL_H */

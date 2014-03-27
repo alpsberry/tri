@@ -75,3 +75,19 @@ int fileOutputTriplet(Mesh mesh, MySolvingSystem solSys)
 
 	return 0;
 }
+
+int triOutput(MyProblem prob, Mesh mesh, MySolvingSystem solSys)
+{
+	if(prob.parameters.printResults)
+		consoleOutput(mesh, solSys);
+	if(prob.parameters.fprintResults)
+		fileOutput(mesh, solSys);
+	if(prob.parameters.fprintMA)
+		fileOutputMA(mesh, solSys);
+	if(prob.parameters.fprintRH)
+		fileOutputRH(mesh, solSys);
+	if(prob.parameters.fprintTriplet)
+		fileOutputTriplet(mesh, solSys);
+
+	return 0;
+}
