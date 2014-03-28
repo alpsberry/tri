@@ -1,4 +1,3 @@
-// tri 0.02 Mar. 26
 #include "tri.h"
 
 int main(int argc, char const *argv[])
@@ -11,10 +10,9 @@ int main(int argc, char const *argv[])
 	if(mesh.initMesh(prob) == 1)
 		return 1;
 
-	MySolvingSystem solSys;
+	FEMSolvingSystem solSys;
 	solSys.assembleStiff(mesh, prob);
 	solSys.solveSparse(mesh, prob);
-
-	triOutput(prob, mesh, solSys);
+	solSys.triOutput(prob, mesh);
 	return 0;
 }

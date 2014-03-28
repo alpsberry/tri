@@ -12,7 +12,7 @@ INCLDIRS =
 
 TRI_TARGET = tri
 
-TRI_SRCS = tri.cpp solveSys.cpp problem.cpp mesh.cpp util.cpp
+TRI_SRCS = tri.cpp solveSys.cpp problem.cpp mesh.cpp FEMSolveSys.cpp
 
 TRI_OBJS = ${TRI_SRCS:.cpp=.o}
 
@@ -35,4 +35,4 @@ clean:
 # mesh.o: mesh.h
 # problem.o: mesh.h problem.h solveSys.h
 # solveSys.o: mesh.h problem.h solveSys.h
-tri.o: tri.h mesh.h problem.h solveSys.h util.h
+tri.o: tri.h mesh.h problem.h solveSys.h FEMSolveSys.h

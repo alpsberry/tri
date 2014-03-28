@@ -5,7 +5,7 @@
 
 #include "mesh.h"
 #include "solveSys.h"
-#include "util.h"
+#include "FEMSolveSys.h"
 #include "problem.h"
 
 #endif
