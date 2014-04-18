@@ -1,5 +1,8 @@
 dat/square.1   # mesh filename
 2              # dimension
+1              # epsilon
+100            # sigma0
+1              # beta0   // for now only deal with beta0 = 1
 0              # solving package, 0 for "UMFPACK" and 1 for "SuperLU"
 0              # output results in console
 1              # file output results, *.output
