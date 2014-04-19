@@ -2,15 +2,15 @@
 
 int main(int argc, char const *argv[])
 {
-	MyProblem prob;
+	DGProblem prob;
 	if(prob.initProblem(argc, argv) == 1)
 		return 1;
 
-	Mesh mesh;
+	Mesh<DGProblem> mesh;
 	if(mesh.initMesh(prob) == 1)
 		return 1;
 
-	DGSolvingSystem solSys;
+	DGSolvingSystem<DGProblem> solSys;
 	solSys.assembleStiff(mesh, prob);
 	solSys.solveSparse(mesh, prob);
 	solSys.triOutput(prob, mesh);

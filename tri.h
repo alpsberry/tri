@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "solveSys.h"
 #include "FEMSolveSys.h"
+#include "FEMProblem.h"
 #include "problem.h"
 
 #endif
