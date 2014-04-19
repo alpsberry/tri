@@ -15,7 +15,14 @@ Read parameters from myinput.input
 
 Changelog
 --------
->Mar. 28
+> Apr. 19
+* modified all files with c++ template in order to deal with different problem definition for different schemes
+* added a matlab visulization code plotTri.m
+* added some sample mesh info files: dat/square.1.node, dat/square.1.ele, dat/square.1.edge
+> Apr. 18
+* Added a Discontinuous Galerkin solving system
+* a sample parameter file for DG tri.input, and for FEM triFEM.input
+> Mar. 28
 * seperate BasicSolvingSystem and MySolvingSystem, rename the latter FEMSolvingSystem
 >
 > Mar. 27
