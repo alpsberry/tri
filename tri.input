@@ -4,6 +4,7 @@ dat/square.1   # mesh filename
 100            # sigma0
 1              # beta0   // for now only deal with beta0 = 1
 0              # solving package, 0 for "UMFPACK" and 1 for "SuperLU"
+1              # compute and print error
 0              # output results in console
 1              # file output results, *.output
 1              # file output stiff matrix in compressed column form, *.ma
