@@ -47,6 +47,7 @@ struct paramstruct
 {
 	std::string meshFilename; // mesh filename
 	SolPack solPack;          // solving package, UMFPACK or SuperLU 
+	int cprintError;          // compute and print error
 	int printResults;	      // output results in console
 	int fprintResults;	      // file output results, *.output
 	int fprintMA;	          // file output stiff matrix in compressed column form, *.ma
@@ -60,9 +61,6 @@ public:
 	// Region region;
 	paramstruct parameters;
 	int dimension;
-	double epsilon;
-	double sigma0;
-	double beta0;
 
 	virtual double f(double x, double y){
 		return 0;
@@ -72,6 +70,42 @@ public:
 	virtual double gd(double x, double y){
 		return 0;
 	}
+
+	int initProblem(std::ifstream &fin)
+	{
+		std::string tempStr;
+		
+		int intSolPack;
+		fin >> intSolPack;
+		if(intSolPack < static_cast<int>(SolPack::Count))
+			parameters.solPack = static_cast<SolPack>(intSolPack);
+		else
+			parameters.solPack = static_cast<SolPack>(DEFAULT_SOLVE_PACK);
+
+		std::getline(fin, tempStr);
+
+		fin >> parameters.cprintError;
+		std::getline(fin, tempStr);
+
+		fin >> parameters.printResults;
+		std::getline(fin, tempStr);
+
+		fin >> parameters.fprintResults;
+		std::getline(fin, tempStr);
+
+		fin >> parameters.fprintMA;
+		std::getline(fin, tempStr);
+
+		fin >> parameters.fprintRH;
+		std::getline(fin, tempStr);
+
+		fin >> parameters.fprintTriplet;
+		std::getline(fin, tempStr);
+	
+		return 0;
+
+	}
+
 
 };
 
