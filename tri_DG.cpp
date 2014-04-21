@@ -3,7 +3,7 @@
 int main(int argc, char const *argv[])
 {
 	DGProblem prob;
-	if(prob.initProblem(argc, argv) == 1)
+	if(prob.initDGProblem(argc, argv) == 1)
 		return 1;
 
 	Mesh<DGProblem> mesh;
