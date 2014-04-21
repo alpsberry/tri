@@ -15,6 +15,11 @@ Read parameters from myinput.input
 
 Changelog
 --------
+> Apr. 21
+* added the function of the exact solution of the problem
+* added the part of computing error
+* added the parameter to control whether to compute and output error or not
+>
 > Apr. 19
 * modified all files with c++ template in order to deal with different problem definition for different schemes
 * added a matlab visulization code plotTri.m
