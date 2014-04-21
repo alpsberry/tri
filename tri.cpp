@@ -3,7 +3,7 @@
 int main(int argc, char const *argv[])
 {
 	FEMProblem prob;
-	if(prob.initProblem(argc, argv) == 1)
+	if(prob.initFEMProblem(argc, argv) == 1)
 		return 1;
 
 	Mesh<FEMProblem> mesh;
