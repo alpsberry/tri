@@ -4,7 +4,7 @@ using std::cout;
 using std::endl;
 
 // read parameters from an input file
-int DGProblem::initProblem(int argc, char const *argv[])
+int DGProblem::initDGProblem(int argc, char const *argv[])
 {
 	std::string paramFile;
 	if( argc < 2 ) {
@@ -39,29 +39,7 @@ int DGProblem::initProblem(int argc, char const *argv[])
 	fin >> beta0;
 	std::getline(fin, tempStr);
 
-	int intSolPack;
-	fin >> intSolPack;
-	if(intSolPack < static_cast<int>(SolPack::Count))
-		parameters.solPack = static_cast<SolPack>(intSolPack);
-	else
-		parameters.solPack = static_cast<SolPack>(DEFAULT_SOLVE_PACK);
-
-	std::getline(fin, tempStr);
-
-	fin >> parameters.printResults;
-	std::getline(fin, tempStr);
-
-	fin >> parameters.fprintResults;
-	std::getline(fin, tempStr);
-
-	fin >> parameters.fprintMA;
-	std::getline(fin, tempStr);
-
-	fin >> parameters.fprintRH;
-	std::getline(fin, tempStr);
-
-	fin >> parameters.fprintTriplet;
-	std::getline(fin, tempStr);
+	initProblem(fin);
 
 	cout << " epsilon = " << epsilon <<endl
 		 << " sigma0 = " << sigma0 << endl
