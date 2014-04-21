@@ -14,8 +14,12 @@ public:
 		return 3 * cos(x) * sin(y);
 		// return 1.0;
 	}
+
+	double trueSol(double x, double y){
+		return cos(x) * sin(y);
+	}
 	// read parameters from an input file
-	int initProblem(int argc, char const *argv[]);
+	int initFEMProblem(int argc, char const *argv[]);
 };
 
 #endif
