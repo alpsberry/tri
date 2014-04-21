@@ -35,6 +35,8 @@ public:
 
 	int triOutput(MyProblem prob, Mesh<MyProblem> mesh);
 
+	double computeError(Mesh<MyProblem> mesh, MyProblem prob);
+
 };
 
 
@@ -252,7 +254,37 @@ int FEMSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
 	if(prob.parameters.fprintTriplet)
 		this -> fileOutputTriplet(mesh, prob);
 
+	if(prob.parameters.cprintError)
+	{
+		double err = computeError(mesh, prob);
+		std::cout << "error = " << err << std::endl;
+	}
+
 	return 0;
+}
+
+template <typename MyProblem>
+double FEMSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem prob)
+{
+	double err = 0;
+	for(Element iEle:mesh.element){
+		Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
+		Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
+		Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
+		double p1(0), p2(0), p3(0); 
+		if(v1.bctype == 0)
+			p1 = this -> x[v1.index];
+		if(v2.bctype == 0)
+			p2 = this -> x[v2.index];
+		if(v3.bctype == 0)
+			p3 = this -> x[v3.index];
+		double m1 = prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0;
+		double m2 = prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0;
+		double m3 = prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0;
+		
+		err += fabs((m1 + m2 + m3) * iEle.detBE / 6.0 );
+	}
+	return err;
 }
 
 #endif /* TRI_FEMSOLVESYS_H */
