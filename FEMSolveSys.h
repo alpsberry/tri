@@ -266,23 +266,37 @@ int FEMSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
 template <typename MyProblem>
 double FEMSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem prob)
 {
+	std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
+
 	double err = 0;
 	for(Element iEle:mesh.element){
 		Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
 		Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
 		Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
 		double p1(0), p2(0), p3(0); 
-		if(v1.bctype == 0)
+		double r1(0), r2(0), r3(0); 
+		if(v1.bctype == 0){
 			p1 = this -> x[v1.index];
-		if(v2.bctype == 0)
+			r1 = fabs(prob.trueSol(v1.x, v1.y) - p1);
+		}
+		if(v2.bctype == 0){
 			p2 = this -> x[v2.index];
-		if(v3.bctype == 0)
+			r2 = fabs(prob.trueSol(v2.x, v2.y) - p2);
+		}
+		if(v3.bctype == 0){
 			p3 = this -> x[v3.index];
-		double m1 = prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0;
-		double m2 = prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0;
-		double m3 = prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0;
+			r3 = fabs(prob.trueSol(v3.x, v3.y) - p3);
+		}
+		double m1 = fabs(prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0);
+		double m2 = fabs(prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0);
+		double m3 = fabs(prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0);
 		
-		err += fabs((m1 + m2 + m3) * iEle.detBE / 6.0 );
+		fout << v1.x << " " << v1.y << " " << r1 << std::endl;
+		fout << v2.x << " " << v2.y << " " << r2 << std::endl;
+		fout << v3.x << " " << v3.y << " " << r3 << std::endl;
+
+		// err += fabs((m1 + m2 + m3) * iEle.detBE / 6.0 );
+		err += sqrt((m1 * m1 + m2 * m2 + m3 * m3) * iEle.detBE / 6.0);
 	}
 	return err;
 }
