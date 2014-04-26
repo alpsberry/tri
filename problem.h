@@ -9,30 +9,38 @@
 
 struct Vertex{
 	int index;
-	double x, y;
-	int bctype;
+	int dofIndex; // index in global dof
+	double x, y;  // coordinates
+	int bctype;   // boundary condition type, 0 for interior vertex, 1 for dirichlet boundary, 2 for neumann boundary
 };
 
 struct Element;
 
 struct Edge{
 	int index;
-	std::vector<int> vertex;
-	std::vector<int> neighborElement;
-	int bctype;
+	int reftype;                       // refinement type, -1 for not refined, 0, 1, 2, ... for refinement level
+	int bctype;                        // boundary condition type, 0 for interior vertex, 1 for dirichlet boundary, 2 for neumann boundary
+	std::vector<int> vertex;           // indices of its vertices
+	std::vector<int> neighborElement;  // indices of elements sharing the edge
 };
 
 struct Element{
-	double detBE;
 	int index;
-	int localDof;
-	std::vector<int> vertex;
-	std::vector<int> edge;
+	double detBE;             // see below
+	int localDof;             // local degrees of freedom
+	int dofIndex;             // index in global dof for the first local dof
+	int reftype;              // refinement type, -1 for not refined, 0, 1, 2, ... for refinement level
+	std::vector<int> vertex;  // indices of its vertices
+	std::vector<int> edge;    // indices of its edges
+	std::vector<int> parent;  // indices of parent element for refinement
+	std::vector<int> child;   // indices of child elements for refinement
 };
 // detBE is the determinant of B_E
 // The mapping F_E from the reference element to any element E is
 // F([x, y]^T) = B_E[x, y]^T + b_E
 // where B_E = [x2 - x1, x3 - x1; y2 - y1. y3 - y1] and b_E = [x1, y1]^T
+
+const int constNonrefined = -1;
 
 class Region{
 public:
@@ -46,6 +54,7 @@ enum class SolPack {UMFPACK, SuperLU, Count};
 struct paramstruct
 {
 	std::string meshFilename; // mesh filename
+	int nRefine;              // number of refinement times
 	SolPack solPack;          // solving package, UMFPACK or SuperLU 
 	int cprintError;          // compute and print error
 	int printResults;	      // output results in console

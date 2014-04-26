@@ -39,6 +39,9 @@ int DGProblem::initDGProblem(int argc, char const *argv[])
 	fin >> beta0;
 	std::getline(fin, tempStr);
 
+	fin >> parameters.nRefine;
+	std::getline(fin, tempStr);
+
 	initProblem(fin);
 
 	cout << " epsilon = " << epsilon <<endl
