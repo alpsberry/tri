@@ -32,7 +32,7 @@ struct Element{
 	int reftype;              // refinement type, -1 for not refined, 0, 1, 2, ... for refinement level
 	std::vector<int> vertex;  // indices of its vertices
 	std::vector<int> edge;    // indices of its edges
-	std::vector<int> parent;  // indices of parent element for refinement
+	int parent;  // indices of parent element for refinement
 	std::vector<int> child;   // indices of child elements for refinement
 };
 // detBE is the determinant of B_E
@@ -55,7 +55,8 @@ struct paramstruct
 {
 	std::string meshFilename; // mesh filename
 	int nRefine;              // number of refinement times
-	SolPack solPack;          // solving package, UMFPACK or SuperLU 
+	SolPack solPack;          // solving package, UMFPACK or SuperLU
+	int cprintMeshInfo;       // print mesh info in console 
 	int cprintError;          // compute and print error
 	int printResults;	      // output results in console
 	int fprintResults;	      // file output results, *.output
@@ -91,6 +92,9 @@ public:
 		else
 			parameters.solPack = static_cast<SolPack>(DEFAULT_SOLVE_PACK);
 
+		std::getline(fin, tempStr);
+
+		fin >> parameters.cprintMeshInfo;
 		std::getline(fin, tempStr);
 
 		fin >> parameters.cprintError;
