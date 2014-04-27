@@ -180,10 +180,15 @@ int Mesh<MyProblem>::readRefinement(MyProblem prob)
 					fin >> tempVertex;
 					pEdge -> vertex.push_back(tempVertex);
 				}
-				fin >> pEdge -> bctype;
+				// fin >> pEdge -> bctype;
 				pEdge -> reftype = -1;
-				if(parentEdge > 0)
+				if(parentEdge > 0){
 					pEdge -> neighborElement = edge[parentEdge - 1].neighborElement;
+					pEdge -> bctype = edge[parentEdge - 1].bctype;
+				}
+				else
+					pEdge -> bctype = 0;
+
 				edge.push_back(*pEdge);
 
 				++j;
@@ -216,7 +221,7 @@ int Mesh<MyProblem>::readRefinement(MyProblem prob)
 				pEle -> detBE = 0;
 				pEle -> parent = parentIndex;
 				element.push_back(*pEle);
-				element[parentIndex].child.push_back(tempEleIndex);
+				element[parentIndex - 1].child.push_back(tempEleIndex);
 				++j;
 			}
 		}
@@ -297,9 +302,11 @@ int Mesh<MyProblem>::initMesh(MyProblem prob)
 	std::cout << "finish initializing mesh" << std::endl << std::endl;
 #endif
 
-	// printVertex();
-	// printEdge();
-	// printElement();
+	if(prob.parameters.cprintMeshInfo){
+		printVertex();
+		printEdge();
+		printElement();
+	}
 
 	return 0;
 }
