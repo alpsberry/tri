@@ -1,6 +1,7 @@
 dat/square.1   # mesh filename
 2              # dimension
 0              # solving package, 0 for "UMFPACK" and 1 for "SuperLU"
+1              # print mesh info in console
 1              # compute and print error
 0              # output results in console
 1              # file output results, *.output
