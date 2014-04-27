@@ -16,7 +16,9 @@ class DGSolvingSystem:public BasicSolvingSystem<MyProblem>
 	const int LocalDimension = 3;
 	double penaltyOver3, penaltyOver6;
 	
-	void calcDetBE(Mesh<MyProblem> &mesh);
+	int retrive_localDof_count_element_index(Mesh<MyProblem> &mesh);
+
+	void calcDetBEOnMesh(Mesh<MyProblem> &mesh);
 
 	std::vector< std::vector<double> > elementInteg(Element ele, Mesh<MyProblem> mesh);
 
@@ -62,9 +64,11 @@ using std::cout;
 using std::endl;
 
 template <typename MyProblem>
-void DGSolvingSystem<MyProblem>::calcDetBE(Mesh<MyProblem> &mesh)
+void DGSolvingSystem<MyProblem>::calcDetBEOnMesh(Mesh<MyProblem> &mesh)
 {
 	for(Element &ele : mesh.element){
+		if(ele.reftype != constNonrefined)
+			continue;
 		double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
 		   x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
 		   x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
@@ -76,7 +80,7 @@ void DGSolvingSystem<MyProblem>::calcDetBE(Mesh<MyProblem> &mesh)
 template <typename MyProblem>
 vector< vector<double> > DGSolvingSystem<MyProblem>::elementInteg(Element ele, Mesh<MyProblem> mesh)
 {
-	vector< vector<double> > vecElementInteg;
+	VECMATRIX vecElementInteg;
 	vecElementInteg.resize(ele.localDof);
 
 	#ifdef __DGSOLVESYS_DEBUG_LV2
@@ -180,15 +184,15 @@ template <typename MyProblem>
 int DGSolvingSystem<MyProblem>::assembleElement(Element ele, Mesh<MyProblem> mesh, MyProblem prob)
 {
 
-	vector< vector<double> > vecElementInteg = elementInteg(ele, mesh);
+	VECMATRIX vecElementInteg = elementInteg(ele, mesh);
 	
 	for(int row = 0; row != vecElementInteg.size(); ++row)
 		for(int col = 0; col != vecElementInteg[row].size(); ++col){
 
 	#ifdef __DGSOLVESYS_DEBUG_LV2
-				cout << "  add to " << ele.index + row << ", " << ele.index + col << endl;
+				cout << "  add to " << ele.dofIndex + row << ", " << ele.dofIndex + col << endl;
 	#endif
-			this -> addToMA(vecElementInteg[row][col], ele.index + row, ele.index + col);
+			this -> addToMA(vecElementInteg[row][col], ele.dofIndex + row, ele.dofIndex + col);
 		}
 
 	// why commenting off this part causes a segmentation fault?
@@ -197,11 +201,27 @@ int DGSolvingSystem<MyProblem>::assembleElement(Element ele, Mesh<MyProblem> mes
 	for(int i = 0; i != vecElementIntegRhs.size(); ++i){
 
 	#ifdef __DGSOLVESYS_DEBUG_LV2
-			cout << "  add rh to " << ele.index + i << endl;
+			cout << "  add rh to " << ele.dofIndex + i << endl;
 	#endif
-		this -> rh[ele.index + i] += vecElementIntegRhs[i];
+		this -> rh[ele.dofIndex + i] += vecElementIntegRhs[i];
 	}
 
+	return 0;
+}
+
+double dist(Vertex v1, Vertex v2)
+{
+	return sqrt((v1.x - v2.x) * (v1.x - v2.x) + (v1.y - v2.y) * (v1.y - v2.y));
+}
+
+int vertexOnEdge(Vertex ver, Vertex e1, Vertex e2)
+{
+	double A = e2.y - e1.y;
+	double B = e1.x - e2.x;
+	double C = e1.y * (e2.x - e1.x) - e1.x * (e2.y - e1.y);
+	double dis = fabs( 1.0 * (A * ver.x + B * ver.y + C) / sqrt(A * A + B * B));
+	if(dis < 0.0001)
+		return 1;
 	return 0;
 }
 
@@ -210,7 +230,7 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 	vector<double> &integ_e1, vector<double> &integ_e2)
 {
 	if(edge.neighborElement.size() != 2){
-		cout << "invalid call" << endl;
+		cout << "invalid call in computing normal vector, element size not equal to 2" << endl;
 		return 1;
 	}
 
@@ -232,6 +252,8 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 		if(edge.vertex[1] == ver){
 			continue;
 		}
+		if( vertexOnEdge(mesh.vertex[ver - 1], mesh.vertex[edge.vertex[0] - 1], mesh.vertex[edge.vertex[1] - 1]) )
+			continue;
 		x1 = mesh.vertex[ver - 1].x;
 		y1 = mesh.vertex[ver - 1].y;
 
@@ -248,6 +270,8 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 		if(edge.vertex[1] == ver){
 			continue;
 		}
+		if( vertexOnEdge(mesh.vertex[ver - 1], mesh.vertex[edge.vertex[0] - 1], mesh.vertex[edge.vertex[1] - 1]) )
+			continue;
 		integ_e2_tmp[k] = 0;
 	}
 
@@ -271,6 +295,45 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 	integ_e2.clear();
 	integ_e2 = integ_e2_tmp;
 
+	// if(std::find(E1.vertex.begin(), E1.vertex.end(), edge.vertex[0]) == E1.vertex.end()
+	// 	|| std::find(E1.vertex.begin(), E1.vertex.end(), edge.vertex[1]) == E1.vertex.end())
+	// {
+		for(int v2 = 0; v2 < E1.vertex.size(); v2++)
+		{
+			if(integ_e1[v2] == 0)
+				continue;
+			for(int v3 = 0; v3 < E1.vertex.size(); v3++){
+				if(v2 == v3 || integ_e1[v3] == 0)
+					continue;
+
+				double length_v2v3 = dist(mesh.vertex[E1.vertex[v2] - 1], mesh.vertex[E1.vertex[v3] - 1]);
+				// double length_edge = dist(mesh.vertex[edge.vertex[0] - 1], mesh.vertex[edge.vertex[1] - 1]);
+				double f1 = dist(mesh.vertex[E1.vertex[v3] - 1], mesh.vertex[edge.vertex[0] - 1]);
+				double f2 = dist(mesh.vertex[E1.vertex[v3] - 1], mesh.vertex[edge.vertex[1] - 1]);
+				integ_e1[v2] = (f1 + f2) * 1.0 / length_v2v3;
+			}
+		}
+	// }
+
+	// if(std::find(E2.vertex.begin(), E2.vertex.end(), edge.vertex[0]) == E2.vertex.end()
+	// 	|| std::find(E2.vertex.begin(), E2.vertex.end(), edge.vertex[1]) == E2.vertex.end())
+	// {
+		for(int v2 = 0; v2 < E2.vertex.size(); v2++)
+		{
+			if(integ_e2[v2] == 0)
+				continue;
+			for(int v3 = 0; v3 < E2.vertex.size(); v3++){
+				if(v2 == v3 || integ_e2[v3] == 0)
+					continue;
+
+				double length_v2v3 = dist(mesh.vertex[E2.vertex[v2] - 1], mesh.vertex[E2.vertex[v3] - 1]);
+				// double length_edge = dist(mesh.vertex[edge.vertex[0] - 1], mesh.vertex[edge.vertex[1] - 1]);
+				double f1 = dist(mesh.vertex[E2.vertex[v3] - 1], mesh.vertex[edge.vertex[0] - 1]);
+				double f2 = dist(mesh.vertex[E2.vertex[v3] - 1], mesh.vertex[edge.vertex[1] - 1]);
+				integ_e2[v2] = (f1 + f2) * 1.0 / length_v2v3;
+			}
+		}
+	// }
 	return 0;
 }
 
@@ -279,7 +342,7 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 	vector<double> &integ_e)
 {
 	if(edge.neighborElement.size() != 1){
-		cout << "invalid call" << endl;
+		cout << "invalid call in computing nomal vector, element size not equal to 1" << endl;
 		return 1;
 	}
 
@@ -396,25 +459,25 @@ template <typename MyProblem>
 int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22)
 {
 	if(edge.neighborElement.size() != 2){
-		cout << "invalid call" << endl;
+		cout << "invalid call in edge integ, element size not equal to 2" << endl;
 		return 1;
 	}
 
 	Element &E1 = mesh.element[edge.neighborElement[0] - 1];
 	Element &E2 = mesh.element[edge.neighborElement[1] - 1];
 
-	double E1_x1(mesh.vertex[ E1.vertex[0] -1].x),
-		   E1_x2(mesh.vertex[ E1.vertex[1] -1].x),
-		   E1_x3(mesh.vertex[ E1.vertex[2] -1].x),
-		   E1_y1(mesh.vertex[ E1.vertex[0] -1].y),
-		   E1_y2(mesh.vertex[ E1.vertex[1] -1].y),
-		   E1_y3(mesh.vertex[ E1.vertex[2] -1].y);
-	double E2_x1(mesh.vertex[ E2.vertex[0] -1].x),
-		   E2_x2(mesh.vertex[ E2.vertex[1] -1].x),
-		   E2_x3(mesh.vertex[ E2.vertex[2] -1].x),
-		   E2_y1(mesh.vertex[ E2.vertex[0] -1].y),
-		   E2_y2(mesh.vertex[ E2.vertex[1] -1].y),
-		   E2_y3(mesh.vertex[ E2.vertex[2] -1].y);
+	double E1_x1(mesh.vertex[ E1.vertex[0] - 1].x),
+		   E1_x2(mesh.vertex[ E1.vertex[1] - 1].x),
+		   E1_x3(mesh.vertex[ E1.vertex[2] - 1].x),
+		   E1_y1(mesh.vertex[ E1.vertex[0] - 1].y),
+		   E1_y2(mesh.vertex[ E1.vertex[1] - 1].y),
+		   E1_y3(mesh.vertex[ E1.vertex[2] - 1].y);
+	double E2_x1(mesh.vertex[ E2.vertex[0] - 1].x),
+		   E2_x2(mesh.vertex[ E2.vertex[1] - 1].x),
+		   E2_x3(mesh.vertex[ E2.vertex[2] - 1].x),
+		   E2_y1(mesh.vertex[ E2.vertex[0] - 1].y),
+		   E2_y2(mesh.vertex[ E2.vertex[1] - 1].y),
+		   E2_y3(mesh.vertex[ E2.vertex[2] - 1].y);
 
 	double rec_detBE1 = 1.0 / E1.detBE;	
 	double rec_detBE2 = 1.0 / E2.detBE;
@@ -477,18 +540,18 @@ template <typename MyProblem>
 int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11)
 {
 	if(edge.neighborElement.size() != 1){
-		cout << "invalid call" << endl;
+		cout << "invalid call in edge integ, element size not equal to 1" << endl;
 		return 1;
 	}
 
 	Element &E1 = mesh.element[edge.neighborElement[0] - 1];
 
-	double E1_x1(mesh.vertex[ E1.vertex[0] -1].x),
-		   E1_x2(mesh.vertex[ E1.vertex[1] -1].x),
-		   E1_x3(mesh.vertex[ E1.vertex[2] -1].x),
-		   E1_y1(mesh.vertex[ E1.vertex[0] -1].y),
-		   E1_y2(mesh.vertex[ E1.vertex[1] -1].y),
-		   E1_y3(mesh.vertex[ E1.vertex[2] -1].y);
+	double E1_x1(mesh.vertex[ E1.vertex[0] - 1].x),
+		   E1_x2(mesh.vertex[ E1.vertex[1] - 1].x),
+		   E1_x3(mesh.vertex[ E1.vertex[2] - 1].x),
+		   E1_y1(mesh.vertex[ E1.vertex[0] - 1].y),
+		   E1_y2(mesh.vertex[ E1.vertex[1] - 1].y),
+		   E1_y3(mesh.vertex[ E1.vertex[2] - 1].y);
 
 	double rec_detBE1 = 1.0 / E1.detBE;	
 	
@@ -544,10 +607,10 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 		#endif
 		for(int row = 0; row != M11.size(); ++row)
 			for(int col = 0; col != M11[row].size(); ++col){
-				this -> addToMA(M11[row][col], E1.index + row, E1.index + col);
+				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
 			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.index + row
-						 << " , " << E1.index + col << ") = "
+					cout << "   ( " << E1.dofIndex + row
+						 << " , " << E1.dofIndex + col << ") = "
 						 << M11[row][col] << endl;
 			#endif
 
@@ -559,10 +622,10 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 		#endif
 		for(int row = 0; row != M12.size(); ++row)
 			for(int col = 0; col != M12[row].size(); ++col){
-				this -> addToMA(M12[row][col], E1.index + row, E2.index + col);
+				this -> addToMA(M12[row][col], E1.dofIndex + row, E2.dofIndex + col);
 			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.index + row
-						 << " , " << E2.index + col << ") = "
+					cout << "   ( " << E1.dofIndex + row
+						 << " , " << E2.dofIndex + col << ") = "
 						 << M12[row][col] << endl;
 			#endif
 			}
@@ -573,10 +636,10 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 		#endif
 		for(int row = 0; row != M21.size(); ++row)
 			for(int col = 0; col != M21[row].size(); ++col){
-				this -> addToMA(M21[row][col], E2.index + row, E1.index + col);
+				this -> addToMA(M21[row][col], E2.dofIndex + row, E1.dofIndex + col);
 			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E2.index + row
-						 << " , " << E1.index + col << ") = "
+					cout << "   ( " << E2.dofIndex + row
+						 << " , " << E1.dofIndex + col << ") = "
 						 << M21[row][col] << endl;
 			#endif
 			}
@@ -587,10 +650,10 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 		#endif
 		for(int row = 0; row != M22.size(); ++row)
 			for(int col = 0; col != M22[row].size(); ++col){
-				this -> addToMA(M22[row][col], E2.index + row, E2.index + col);
+				this -> addToMA(M22[row][col], E2.dofIndex + row, E2.dofIndex + col);
 			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E2.index + row
-						 << " , " << E2.index + col << ") = "
+					cout << "   ( " << E2.dofIndex + row
+						 << " , " << E2.dofIndex + col << ") = "
 						 << M22[row][col] << endl;
 			#endif
 			}
@@ -604,10 +667,10 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 		#endif
 		for(int row = 0; row != M11.size(); ++row)
 			for(int col = 0; col != M11[row].size(); ++col){
-				this -> addToMA(M11[row][col], E1.index + row, E1.index + col);
+				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
 			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.index + row
-						 << " , " << E1.index + col << ") = "
+					cout << "   ( " << E1.dofIndex + row
+						 << " , " << E1.dofIndex + col << ") = "
 						 << M11[row][col] << endl;
 			#endif
 
@@ -619,22 +682,36 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 }
 
 template <typename MyProblem>
-int retrive_localDof_count_element_index(Mesh<MyProblem> &mesh)
+int DGSolvingSystem<MyProblem>::retrive_localDof_count_element_index(Mesh<MyProblem> &mesh)
 {
 	int dof(0);
+	// for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
+	// {
+	// 	if(itEle -> reftype == constNonrefined)
+	// 	{
+	// 		itEle -> dofIndex = dof;
+	// 		itEle -> localDof = LocalDimension;
+	// 		dof += LocalDimension;
+	// 	}
+	// }
+
+
 	for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
 	{
-		itEle -> index = dof;
-		int tmpLocalDof = 0;
-		for(int ver : itEle -> vertex){
-			if(mesh.vertex[ver - 1].bctype == 0){
-				++dof;
-				++tmpLocalDof;
+		if(itEle -> reftype == constNonrefined)
+		{
+			itEle -> dofIndex = dof;
+			int tmpLocalDof = 0;
+			for(int ver : itEle -> vertex){
+				if(mesh.vertex[ver - 1].bctype == 0){
+					++dof;
+					++tmpLocalDof;
+				}
 			}
+			itEle -> localDof = tmpLocalDof;
 		}
-		itEle -> localDof = tmpLocalDof;
 	}
-
+	
 	return dof;
 }
 
@@ -657,17 +734,20 @@ int DGSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem p
 		cout << " dof = " << this -> dof << endl;
 	#endif
 
-	calcDetBE(mesh); //calculate det(B_E) for each element
+	calcDetBEOnMesh(mesh); //calculate det(B_E) for each element
 	
 	// assemble element integral related items
 	int k = 1;
 	for(auto it = mesh.element.begin();
 		it != mesh.element.end(); ++it, ++k)
 	{
+		if(it -> reftype != constNonrefined)
+			continue;
 
 	#ifdef __DGSOLVESYS_DEBUG_LV2
 			cout << " assemble element " << k << endl;
 	#endif
+
 		assembleElement(*it, mesh, prob);
 	}
 	t = clock() - t;
@@ -688,6 +768,8 @@ int DGSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem p
 	k = 1;
 	for(auto it = mesh.edge.begin(); it != mesh.edge.end(); ++it, ++k)
 	{
+		if(it -> reftype != constNonrefined)
+			continue;
 
 	#ifdef __DGSOLVESYS_DEBUG_EDGE
 			cout << " assemble edge " << k << endl;
@@ -712,11 +794,15 @@ template <typename MyProblem>
 int DGSolvingSystem<MyProblem>::consoleOutput(Mesh<MyProblem> mesh)
 {
 	std::vector<Element>::iterator it;
-	int k;
-	for(k = 0, it = mesh.element.begin(); it != mesh.element.end(); it++)
+	int k(0);
+	for(it = mesh.element.begin(); it != mesh.element.end(); it++){
+		if(it -> reftype != constNonrefined)
+			continue;
+		k = 0;
 		for(int ver : it -> vertex)
 			if(mesh.vertex[ver - 1].bctype == 0)
-				cout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[k++] << std::endl;
+				cout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
+	}
 
 	return 0;
 }
@@ -727,16 +813,20 @@ int DGSolvingSystem<MyProblem>::fileOutput(Mesh<MyProblem> mesh, MyProblem prob)
 	std::ofstream fout((prob.parameters.meshFilename + ".output").c_str());
 
 	std::vector<Element>::iterator it;
-	int k;
-
-	for(k = 0, it = mesh.element.begin(); it != mesh.element.end(); it++)
+	int k(0);
+	for(it = mesh.element.begin(); it != mesh.element.end(); it++){
+		if(it -> reftype != constNonrefined){
+			continue;
+		}
+		k = 0;
 		for(int ver : it -> vertex){
 			if(mesh.vertex[ver - 1].bctype == 0)
-				fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[k++] << std::endl;
+				fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
 			else
 				fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " "
 					 << prob.gd(mesh.vertex[ver - 1].x, mesh.vertex[ver - 1].y) << std::endl;
 		}
+	}
 		
 
 	return 0;		
@@ -772,21 +862,23 @@ double DGSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem 
 
 	double err = 0;
 	for(Element iEle:mesh.element){
+		if(iEle.reftype != constNonrefined)
+			continue;
 		Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
 		Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
 		Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
 		double p1(0), p2(0), p3(0); 
 		double r1(0), r2(0), r3(0); 
 		if(v1.bctype == 0){
-			p1 = this -> x[iEle.index];
+			p1 = this -> x[iEle.dofIndex];
 			r1 = fabs(prob.trueSol(v1.x, v1.y) - p1);
 		}
 		if(v2.bctype == 0){
-			p2 = this -> x[iEle.index + 1];
+			p2 = this -> x[iEle.dofIndex + 1];
 			r2 = fabs(prob.trueSol(v2.x, v2.y) - p2);
 		}
 		if(v3.bctype == 0){
-			p3 = this -> x[iEle.index + 2];
+			p3 = this -> x[iEle.dofIndex + 2];
 			r3 = fabs(prob.trueSol(v3.x, v3.y) - p3);
 		}
 		double m1 = fabs(prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0);
