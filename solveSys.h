@@ -17,6 +17,8 @@ struct maColEle
 	double value;
 };
 
+typedef std::vector< std::vector<double> > VECMATRIX;
+
 bool maCompareFunc(const maColEle t1,const maColEle t2);
 
 template <typename MyProblem>
