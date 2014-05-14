@@ -30,6 +30,8 @@ int FEMProblem::initFEMProblem(int argc, char const *argv[])
 	fin >> dimension;
 	std::getline(fin, tempStr);
 
+	parameters.nRefine = 0;
+
 	initProblem(fin);
 
 	return 0;
