@@ -8,8 +8,6 @@
 #include "solveSys.h"
 #include "DGProblem.h"
 
-typedef std::vector< std::vector<double> > VECMATRIX;
-
 template <typename MyProblem>
 class DGSolvingSystem:public BasicSolvingSystem<MyProblem>
 {
@@ -711,7 +709,7 @@ int DGSolvingSystem<MyProblem>::retrive_localDof_count_element_index(Mesh<MyProb
 			itEle -> localDof = tmpLocalDof;
 		}
 	}
-	
+
 	return dof;
 }
 
@@ -881,18 +879,19 @@ double DGSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem 
 			p3 = this -> x[iEle.dofIndex + 2];
 			r3 = fabs(prob.trueSol(v3.x, v3.y) - p3);
 		}
-		double m1 = fabs(prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0);
-		double m2 = fabs(prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0);
-		double m3 = fabs(prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0);
+		// double m1 = fabs(prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0);
+		// double m2 = fabs(prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0);
+		// double m3 = fabs(prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0);
 
 		fout << v1.x << " " << v1.y << " " << r1 << std::endl;
 		fout << v2.x << " " << v2.y << " " << r2 << std::endl;
 		fout << v3.x << " " << v3.y << " " << r3 << std::endl;
 		
 		// err += fabs((m1 + m2 + m3) * iEle.detBE / 6.0 );
-		err += sqrt((m1 * m1 + m2 * m2 + m3 * m3) * iEle.detBE / 6.0);
+		// err += sqrt((m1 * m1 + m2 * m2 + m3 * m3) * iEle.detBE / 6.0);
+		err += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 	}
-	return err;
+	return sqrt(err);
 }
 
 #endif /* TRI_DGSOLVESYS_H */
