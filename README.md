@@ -19,6 +19,9 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> May 14
+* fix the part of computing error in L2 norm
+>
 > Apr. 28
 * the Discontinous Galerkin solving system can now deal with refinement with hanging nodes
 * a simple tool to generate normalized mesh and refinement is provided, see usage
