@@ -46,7 +46,7 @@ class DGSolvingSystem:public BasicSolvingSystem
 
 	int fileOutput(Mesh mesh, Problem& prob);
 	
-	double computeError(Mesh mesh, Problem& prob);
+	void computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1);
 
 public:
 
@@ -828,51 +828,54 @@ int DGSolvingSystem::triOutput(Problem& prob, Mesh mesh)
 
 	if(prob.parameters.cprintError)
 	{
-		double err = computeError(mesh, prob);
-		std::cout << "error = " << err << std::endl;
+		double errL2(0), errH1(0);
+		computeError(mesh, prob, errL2, errH1);
+		std::cout << "error in L2 norm = " << errL2 << std::endl
+		          << "error in H1 norm = " << errH1 << std::endl;
 	}
 
 	return 0;
 }
 
-double DGSolvingSystem::computeError(Mesh mesh, Problem& prob)
+void DGSolvingSystem::computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 
-	double err = 0;
+	errL2 = 0;
+	errH1 = 0;
 	for(Element iEle:mesh.element){
 		if(iEle.reftype != constNonrefined)
 			continue;
 		Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
 		Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
 		Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
+		double x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y), x3(v3.x), y3(v3.y);
 		double p1(0), p2(0), p3(0); 
 		double r1(0), r2(0), r3(0); 
 		if(v1.bctype == 0){
 			p1 = this -> x[iEle.dofIndex];
-			r1 = fabs(prob.trueSol(v1.x, v1.y) - p1);
+			r1 = prob.trueSol(x1, y1) - p1;
 		}
 		if(v2.bctype == 0){
 			p2 = this -> x[iEle.dofIndex + 1];
-			r2 = fabs(prob.trueSol(v2.x, v2.y) - p2);
+			r2 = prob.trueSol(x2, y2) - p2;
 		}
 		if(v3.bctype == 0){
 			p3 = this -> x[iEle.dofIndex + 2];
-			r3 = fabs(prob.trueSol(v3.x, v3.y) - p3);
+			r3 = prob.trueSol(x3, y3) - p3;
 		}
-		// double m1 = fabs(prob.trueSol((v2.x + v3.x) / 2.0, (v2.y + v3.y) / 2.0) - (p2 + p3) / 2.0);
-		// double m2 = fabs(prob.trueSol((v1.x + v3.x) / 2.0, (v1.y + v3.y) / 2.0) - (p1 + p3) / 2.0);
-		// double m3 = fabs(prob.trueSol((v1.x + v2.x) / 2.0, (v1.y + v2.y) / 2.0) - (p1 + p2) / 2.0);
+	
+		errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
 		fout << v1.x << " " << v1.y << " " << r1 << std::endl;
 		fout << v2.x << " " << v2.y << " " << r2 << std::endl;
 		fout << v3.x << " " << v3.y << " " << r3 << std::endl;
 		
-		// err += fabs((m1 + m2 + m3) * iEle.detBE / 6.0 );
-		// err += sqrt((m1 * m1 + m2 * m2 + m3 * m3) * iEle.detBE / 6.0);
-		err += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
+		errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
+	    	      + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;		
 	}
-	return sqrt(err);
+	errL2 = sqrt(errL2);
+	errH1 = sqrt(errH1);
 }
 
 #endif /* TRI_DGSOLVESYS_H */
