@@ -17,27 +17,26 @@
 
 using std::vector;
 
-template <typename MyProblem>
-class FEMSolvingSystem: public BasicSolvingSystem<MyProblem>
+class FEMSolvingSystem: public BasicSolvingSystem
 {
 public:
-	VECMATRIX integA(Element &ele, Mesh<MyProblem> mesh, MyProblem prob);
+	VECMATRIX integA(Element &ele, Mesh mesh, Problem& prob);
 
-	double integARH(Element ele, Mesh<MyProblem> mesh, int vi, MyProblem prob);
+	double integARH(Element ele, Mesh mesh, int vi, Problem& prob);
 
-	int getStiff(Element& ele, Mesh<MyProblem> &mesh, MyProblem prob);
+	int getStiff(Element& ele, Mesh &mesh, Problem& prob);
 
-	int retrive_dof_count_vertex_index(Mesh<MyProblem> &mesh);
+	int retrive_dof_count_vertex_index(Mesh &mesh);
 
-	int assembleStiff(Mesh<MyProblem> &mesh, MyProblem prob);
+	int assembleStiff(Mesh &mesh, Problem& prob);
 
-	int consoleOutput(Mesh<MyProblem> mesh, MyProblem prob);
+	int consoleOutput(Mesh mesh, Problem& prob);
 
-	int fileOutput(Mesh<MyProblem> mesh, MyProblem prob);
+	int fileOutput(Mesh mesh, Problem& prob);
 
-	int triOutput(MyProblem prob, Mesh<MyProblem> mesh);
+	int triOutput(Problem& prob, Mesh mesh);
 
-	double computeError(Mesh<MyProblem> mesh, MyProblem prob);
+	double computeError(Mesh mesh, Problem& prob);
 
 };
 
@@ -46,8 +45,7 @@ double innerProduct(vector<double> x, vector<double> y)
 	return x[0] * y[0] + x[1] * y[1];
 }
 
-template <typename MyProblem>
-void calcDetBEOnMesh(Mesh<MyProblem> &mesh)
+void calcDetBEOnMesh(Mesh &mesh)
 {
 	for(Element &ele : mesh.element){
 		double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
@@ -62,8 +60,7 @@ void calcDetBEOnMesh(Mesh<MyProblem> &mesh)
 // gradInteg = \int_E \nabla \phi_i \nabla v
 // timeInteg = \int_E uv
 // nodal basis are used here
-template <typename MyProblem>
-VECMATRIX FEMSolvingSystem<MyProblem>::integA(Element &ele, Mesh<MyProblem> mesh, MyProblem prob)
+VECMATRIX FEMSolvingSystem::integA(Element &ele, Mesh mesh, Problem& prob)
 {
 	VECMATRIX vecIntegA;
 	vecIntegA.resize(3);
@@ -106,8 +103,7 @@ VECMATRIX FEMSolvingSystem<MyProblem>::integA(Element &ele, Mesh<MyProblem> mesh
 // calc \int_E f\phi
 // \int_E f\phi = |detB_E| / 6 * (\sum_{i=1}^3 f(m_i)\phi(m_i))
 // where m_i is the midpoint of each edge
-template <typename MyProblem>
-double FEMSolvingSystem<MyProblem>::integARH(Element ele, Mesh<MyProblem> mesh, int vi, MyProblem prob)
+double FEMSolvingSystem::integARH(Element ele, Mesh mesh, int vi, Problem& prob)
 {
 	double x1(mesh.vertex[ele.vertex[vi] - 1].x), y1(mesh.vertex[ele.vertex[vi] - 1].y);
 
@@ -123,8 +119,7 @@ double FEMSolvingSystem<MyProblem>::integARH(Element ele, Mesh<MyProblem> mesh, 
 	return prob.f(x1, y1) * ele.detBE / 6.0;
 }
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::getStiff(Element& ele, Mesh<MyProblem> &mesh, MyProblem prob){
+int FEMSolvingSystem::getStiff(Element& ele, Mesh &mesh, Problem& prob){
 
 #ifdef __FEMSOLVESYS_DEBUG_LV2
 	std::cout << " assemble element " << ele.index << std::endl;
@@ -166,8 +161,7 @@ int FEMSolvingSystem<MyProblem>::getStiff(Element& ele, Mesh<MyProblem> &mesh, M
 	return 0;
 }
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::retrive_dof_count_vertex_index(Mesh<MyProblem> &mesh)
+int FEMSolvingSystem::retrive_dof_count_vertex_index(Mesh &mesh)
 {
 	int dof(0);
 	for(Vertex &iVer:mesh.vertex)
@@ -179,8 +173,7 @@ int FEMSolvingSystem<MyProblem>::retrive_dof_count_vertex_index(Mesh<MyProblem> 
 	return dof;
 }
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem prob)
+int FEMSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 {
 
 	this -> dof = retrive_dof_count_vertex_index(mesh);
@@ -223,8 +216,7 @@ int FEMSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem 
 	return 0;
 }
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::consoleOutput(Mesh<MyProblem> mesh, MyProblem prob)
+int FEMSolvingSystem::consoleOutput(Mesh mesh, Problem& prob)
 {
 	std::vector<Vertex>::iterator it;
 	int k;
@@ -240,8 +232,7 @@ int FEMSolvingSystem<MyProblem>::consoleOutput(Mesh<MyProblem> mesh, MyProblem p
 	return 0;
 }
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::fileOutput(Mesh<MyProblem> mesh, MyProblem prob)
+int FEMSolvingSystem::fileOutput(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".output").c_str());
 
@@ -262,8 +253,7 @@ int FEMSolvingSystem<MyProblem>::fileOutput(Mesh<MyProblem> mesh, MyProblem prob
 }
 
 
-template <typename MyProblem>
-int FEMSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
+int FEMSolvingSystem::triOutput(Problem& prob, Mesh mesh)
 {
 	if(prob.parameters.printResults)
 		consoleOutput(mesh, prob);
@@ -285,8 +275,7 @@ int FEMSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
 	return 0;
 }
 
-template <typename MyProblem>
-double FEMSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem prob)
+double FEMSolvingSystem::computeError(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 

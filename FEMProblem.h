@@ -19,7 +19,7 @@ public:
 		return cos(x) * sin(y);
 	}
 	// read parameters from an input file
-	int initFEMProblem(int argc, char const *argv[]);
+	int initProblem(int argc, char const *argv[]);
 };
 
 #endif

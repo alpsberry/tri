@@ -4,7 +4,7 @@ using std::cout;
 using std::endl;
 
 // read parameters from an input file
-int FEMProblem::initFEMProblem(int argc, char const *argv[])
+int FEMProblem::initProblem(int argc, char const *argv[])
 {
 	std::string paramFile;
 	if( argc < 2 ) {
@@ -32,7 +32,35 @@ int FEMProblem::initFEMProblem(int argc, char const *argv[])
 
 	parameters.nRefine = 0;
 
-	initProblem(fin);
+	int intSolPack;
+	fin >> intSolPack;
+	if(intSolPack < static_cast<int>(SolPack::Count))
+		parameters.solPack = static_cast<SolPack>(intSolPack);
+	else
+		parameters.solPack = static_cast<SolPack>(DEFAULT_SOLVE_PACK);
+
+	std::getline(fin, tempStr);
+
+	fin >> parameters.cprintMeshInfo;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.cprintError;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.printResults;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.fprintResults;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.fprintMA;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.fprintRH;
+	std::getline(fin, tempStr);
+
+	fin >> parameters.fprintTriplet;
+	std::getline(fin, tempStr);
 
 	return 0;
 }
