@@ -9,34 +9,23 @@
 #include "problem.h"
 #include "DGProblem.h"
 
-template < typename MyProblem > class Mesh : public Region
+class Mesh : public Region
 {
-public:
-	int kidof;
-	int kbdof;
-	Mesh(){
-		kidof = 0;
-		kbdof = 0;
-	}
-	int initElement(MyProblem prob);
-
-	int initEdge(MyProblem prob);
-
-	int initVertex(MyProblem prob);
-
-	int readRefinement(MyProblem prob);
-
+	int initElement(Problem& prob);
+	int initEdge(Problem& prob);
+	int initVertex(Problem& prob);
+	int readRefinement(Problem& prob);
 	void findElementEdge(int previousLevelElementSize);
-
-	int initMesh(MyProblem prob);
 
 	void printVertex();
 	void printEdge();
 	void printElement();
+public:
+	int initMesh(Problem& prob);
+
 };
 
-template < typename MyProblem >
-int Mesh<MyProblem>::initElement(MyProblem prob)
+int Mesh::initElement(Problem& prob)
 {
 	std::ifstream fin((prob.parameters.meshFilename + ".ele").c_str());
 		if(!fin){
@@ -72,8 +61,7 @@ int Mesh<MyProblem>::initElement(MyProblem prob)
 	return 0;
 }
 
-template < typename MyProblem >
-int Mesh<MyProblem>::initEdge(MyProblem prob)
+int Mesh::initEdge(Problem& prob)
 {
 	std::ifstream fin((prob.parameters.meshFilename + ".edge").c_str());
 	if(!fin){
@@ -98,8 +86,7 @@ int Mesh<MyProblem>::initEdge(MyProblem prob)
 	return 0;
 }
 
-template < typename MyProblem >
-int Mesh<MyProblem>::initVertex(MyProblem prob)
+int Mesh::initVertex(Problem& prob)
 {
 	int numVer, dim, numAttr, numBound;
 	std::ifstream fin((prob.parameters.meshFilename + ".node").c_str());
@@ -124,22 +111,12 @@ int Mesh<MyProblem>::initVertex(MyProblem prob)
 			fin >> it -> index >> it -> x >> it -> y;
 			fin >> tempBound;
 			it -> bctype = tempBound;
-	// it -> bctype = 0;
-			if(tempBound == 0){
-				kidof++;
-				it -> index = kidof;
-			}
-			else{
-				kbdof++;
-				it -> index = kbdof;
-			}
 		}
 
 	return 0;
 }
 
-template < typename MyProblem >
-int Mesh<MyProblem>::readRefinement(MyProblem prob)
+int Mesh::readRefinement(Problem& prob)
 {
 	for(int refineLevel = 0; refineLevel < prob.parameters.nRefine; refineLevel++)
 	{
@@ -232,8 +209,7 @@ int Mesh<MyProblem>::readRefinement(MyProblem prob)
 	return 0;
 }
 
-template < typename MyProblem >
-void Mesh<MyProblem>::findElementEdge(int previousLevelElementSize)
+void Mesh::findElementEdge(int previousLevelElementSize)
 {
 	for(int i = previousLevelElementSize; i < element.size(); i++){
 		Element& ele = element[i];
@@ -263,8 +239,7 @@ void Mesh<MyProblem>::findElementEdge(int previousLevelElementSize)
 	}
 }
 
-template < typename MyProblem >
-int Mesh<MyProblem>::initMesh(MyProblem prob)
+int Mesh::initMesh(Problem& prob)
 {
 #ifdef __MESH_DEBUG
 	std::cout << "start initializing mesh" << std::endl;
@@ -311,8 +286,7 @@ int Mesh<MyProblem>::initMesh(MyProblem prob)
 	return 0;
 }
 
-template < typename MyProblem >
-void Mesh<MyProblem>::printVertex()
+void Mesh::printVertex()
 {
 	std::cout << "vertex:" << std::endl;
 	std::cout << "index\t" << "x\t" << "y\t" << "bctype" << std::endl;
@@ -324,8 +298,7 @@ void Mesh<MyProblem>::printVertex()
 	
 }
 
-template < typename MyProblem >
-void Mesh<MyProblem>::printEdge()
+void Mesh::printEdge()
 {
 	std::cout << "edge:" << std::endl;
 	std::cout << "index\t" << "reftype\t" << "bctype\t" << "vertex\t" << "neighborElement" << std::endl;
@@ -348,8 +321,7 @@ void Mesh<MyProblem>::printEdge()
 	
 }
 
-template < typename MyProblem >
-void Mesh<MyProblem>::printElement()
+void Mesh::printElement()
 {
 	std::cout << "element:" << std::endl;
 	std::cout << "index\t" << "reftype\t" << "vertex\t\t" << "edge\t\t" << "parent\t" << "child" << std::endl;

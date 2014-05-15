@@ -8,52 +8,51 @@
 #include "solveSys.h"
 #include "DGProblem.h"
 
-template <typename MyProblem>
-class DGSolvingSystem:public BasicSolvingSystem<MyProblem>
+class DGSolvingSystem:public BasicSolvingSystem
 {
 	const int LocalDimension = 3;
 	double penaltyOver3, penaltyOver6;
 	
-	int retrive_localDof_count_element_index(Mesh<MyProblem> &mesh);
+	int retrive_localDof_count_element_index(Mesh &mesh);
 
-	void calcDetBEOnMesh(Mesh<MyProblem> &mesh);
+	void calcDetBEOnMesh(Mesh &mesh);
 
-	std::vector< std::vector<double> > elementInteg(Element ele, Mesh<MyProblem> mesh);
+	std::vector< std::vector<double> > elementInteg(Element ele, Mesh mesh);
 
-	std::vector<double> elementIntegRhs(Element ele, Mesh<MyProblem> mesh, MyProblem prob);
+	std::vector<double> elementIntegRhs(Element ele, Mesh mesh, Problem& prob);
 
-	int edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22);
+	int edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22);
 
-	int edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11);
+	int edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11);
 
-	int assembleElement(Element ele, Mesh<MyProblem> mesh, MyProblem prob);
+	int assembleElement(Element ele, Mesh mesh, Problem& prob);
 
-	int assembleEdge(Edge edge, Mesh<MyProblem> mesh, MyProblem prob);
+	int assembleEdge(Edge edge, Mesh mesh, Problem& prob);
 
 	double innerProduct(std::vector<double> x, std::vector<double> y);
 	
 	double penaltyTerm(Edge edge, int v1, int v2);
 	
-	int calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<MyProblem> mesh, std::vector<double> &ne,
+	int calcNormalVectorAndIntegOnEdge(Edge edge, Mesh mesh, std::vector<double> &ne,
 		std::vector<double> &integ_e);
 
-	int calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<MyProblem> mesh, std::vector<double> &ne,
+	int calcNormalVectorAndIntegOnEdge(Edge edge, Mesh mesh, std::vector<double> &ne,
 		std::vector<double> &integ_e1, std::vector<double> &integ_e2);
 
-	int getMii(Mesh<MyProblem> mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, std::vector<double> integ_e1, std::vector<double> integ_e2, double eps,
+	int getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, std::vector<double> integ_e1, std::vector<double> integ_e2, double eps,
 		std::vector<double> ne, std::vector< std::vector<double> > grad_E1, std::vector< std::vector<double> > grad_E2, int sign1, int sing2, int sing3);
 
-	int consoleOutput(Mesh<MyProblem> mesh);
+	int consoleOutput(Mesh mesh);
 
-	int fileOutput(Mesh<MyProblem> mesh, MyProblem prob);
+	int fileOutput(Mesh mesh, Problem& prob);
 	
-	double computeError(Mesh<MyProblem> mesh, MyProblem prob);
+	double computeError(Mesh mesh, Problem& prob);
 
 public:
 
-	int assembleStiff(Mesh<MyProblem> &mesh, MyProblem prob);
+	int assembleStiff(Mesh &mesh, Problem& prob);
 
-	int triOutput(MyProblem prob, Mesh<MyProblem> mesh);
+	int triOutput(Problem& prob, Mesh mesh);
 };
 
 
@@ -61,8 +60,7 @@ using std::vector;
 using std::cout;
 using std::endl;
 
-template <typename MyProblem>
-void DGSolvingSystem<MyProblem>::calcDetBEOnMesh(Mesh<MyProblem> &mesh)
+void DGSolvingSystem::calcDetBEOnMesh(Mesh &mesh)
 {
 	for(Element &ele : mesh.element){
 		if(ele.reftype != constNonrefined)
@@ -75,8 +73,7 @@ void DGSolvingSystem<MyProblem>::calcDetBEOnMesh(Mesh<MyProblem> &mesh)
 	}
 }
 
-template <typename MyProblem>
-vector< vector<double> > DGSolvingSystem<MyProblem>::elementInteg(Element ele, Mesh<MyProblem> mesh)
+vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
 {
 	VECMATRIX vecElementInteg;
 	vecElementInteg.resize(ele.localDof);
@@ -138,8 +135,7 @@ vector< vector<double> > DGSolvingSystem<MyProblem>::elementInteg(Element ele, M
 	return vecElementInteg;
 }
 
-template <typename MyProblem>
-vector<double> DGSolvingSystem<MyProblem>::elementIntegRhs(Element ele, Mesh<MyProblem> mesh, MyProblem prob)
+vector<double> DGSolvingSystem::elementIntegRhs(Element ele, Mesh mesh, Problem& prob)
 {
 	vector<double> vecElementIntegRhs;
 	
@@ -178,8 +174,7 @@ vector<double> DGSolvingSystem<MyProblem>::elementIntegRhs(Element ele, Mesh<MyP
 	return vecElementIntegRhs;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::assembleElement(Element ele, Mesh<MyProblem> mesh, MyProblem prob)
+int DGSolvingSystem::assembleElement(Element ele, Mesh mesh, Problem& prob)
 {
 
 	VECMATRIX vecElementInteg = elementInteg(ele, mesh);
@@ -223,8 +218,7 @@ int vertexOnEdge(Vertex ver, Vertex e1, Vertex e2)
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<MyProblem> mesh, vector<double> &ne,
+int DGSolvingSystem::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh mesh, vector<double> &ne,
 	vector<double> &integ_e1, vector<double> &integ_e2)
 {
 	if(edge.neighborElement.size() != 2){
@@ -335,8 +329,7 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<MyProblem> mesh, vector<double> &ne,
+int DGSolvingSystem::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh mesh, vector<double> &ne,
 	vector<double> &integ_e)
 {
 	if(edge.neighborElement.size() != 1){
@@ -385,8 +378,7 @@ int DGSolvingSystem<MyProblem>::calcNormalVectorAndIntegOnEdge(Edge edge, Mesh<M
 	return 0;
 }
 
-template <typename MyProblem>
-double DGSolvingSystem<MyProblem>::innerProduct(vector<double> x, vector<double> y)
+double DGSolvingSystem::innerProduct(vector<double> x, vector<double> y)
 {
 	return x[0] * y[0] + x[1] * y[1];
 }
@@ -417,8 +409,7 @@ void initM(VECMATRIX &M11, int dofE1)
 		M11[i].resize(dofE1);
 }
 
-template <typename MyProblem>
-double DGSolvingSystem<MyProblem>::penaltyTerm(Edge edge, int v1, int v2)
+double DGSolvingSystem::penaltyTerm(Edge edge, int v1, int v2)
 {
 	// if any of vi, v2 is not on the edge, then the penalty term is 0
 	if((v1 != edge.vertex[0] && v1 != edge.vertex[1]) || (v2 != edge.vertex[0] && v2 != edge.vertex[1]))
@@ -430,8 +421,7 @@ double DGSolvingSystem<MyProblem>::penaltyTerm(Edge edge, int v1, int v2)
 		return penaltyOver6; // i.e. sigma0 / 6.0
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::getMii(Mesh<MyProblem> mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, vector<double> integ_e1, vector<double> integ_e2, double eps,
+int DGSolvingSystem::getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, vector<double> integ_e1, vector<double> integ_e2, double eps,
 	vector<double> ne, vector< vector<double> > grad_E1, vector< vector<double> > grad_E2, int sign1, int sign2, int sign3)
 {
 	int row(0), col(0);
@@ -453,8 +443,7 @@ int DGSolvingSystem<MyProblem>::getMii(Mesh<MyProblem> mesh, Edge edge, VECMATRI
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22)
+int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22)
 {
 	if(edge.neighborElement.size() != 2){
 		cout << "invalid call in edge integ, element size not equal to 2" << endl;
@@ -534,8 +523,7 @@ int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyPro
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyProblem prob, VECMATRIX &M11)
+int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11)
 {
 	if(edge.neighborElement.size() != 1){
 		cout << "invalid call in edge integ, element size not equal to 1" << endl;
@@ -588,8 +576,7 @@ int DGSolvingSystem<MyProblem>::edgeInteg(Edge edge, Mesh<MyProblem> mesh, MyPro
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, MyProblem prob)
+int DGSolvingSystem::assembleEdge(Edge edge, Mesh mesh, Problem& prob)
 {
 	VECMATRIX M11, M12, M21, M22;
 	Element &E1 = mesh.element[edge.neighborElement[0] - 1];
@@ -679,8 +666,7 @@ int DGSolvingSystem<MyProblem>::assembleEdge(Edge edge, Mesh<MyProblem> mesh, My
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::retrive_localDof_count_element_index(Mesh<MyProblem> &mesh)
+int DGSolvingSystem::retrive_localDof_count_element_index(Mesh &mesh)
 {
 	int dof(0);
 	// for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
@@ -713,8 +699,7 @@ int DGSolvingSystem<MyProblem>::retrive_localDof_count_element_index(Mesh<MyProb
 	return dof;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem prob)
+int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 {
 	#ifdef __DGSOLVESYS_DEBUG
 		cout << "start forming system" << endl;
@@ -788,8 +773,7 @@ int DGSolvingSystem<MyProblem>::assembleStiff(Mesh<MyProblem> &mesh, MyProblem p
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::consoleOutput(Mesh<MyProblem> mesh)
+int DGSolvingSystem::consoleOutput(Mesh mesh)
 {
 	std::vector<Element>::iterator it;
 	int k(0);
@@ -805,8 +789,7 @@ int DGSolvingSystem<MyProblem>::consoleOutput(Mesh<MyProblem> mesh)
 	return 0;
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::fileOutput(Mesh<MyProblem> mesh, MyProblem prob)
+int DGSolvingSystem::fileOutput(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".output").c_str());
 
@@ -830,8 +813,7 @@ int DGSolvingSystem<MyProblem>::fileOutput(Mesh<MyProblem> mesh, MyProblem prob)
 	return 0;		
 }
 
-template <typename MyProblem>
-int DGSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
+int DGSolvingSystem::triOutput(Problem& prob, Mesh mesh)
 {
 	if(prob.parameters.printResults)
 		consoleOutput(mesh);
@@ -853,8 +835,7 @@ int DGSolvingSystem<MyProblem>::triOutput(MyProblem prob, Mesh<MyProblem> mesh)
 	return 0;
 }
 
-template <typename MyProblem>
-double DGSolvingSystem<MyProblem>::computeError(Mesh<MyProblem> mesh, MyProblem prob)
+double DGSolvingSystem::computeError(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 

@@ -21,50 +21,44 @@ typedef std::vector< std::vector<double> > VECMATRIX;
 
 bool maCompareFunc(const maColEle t1,const maColEle t2);
 
-template <typename MyProblem>
 class BasicSolvingSystem
 {
-public:
-	int dof;
-
-	std::vector< std::list<maColEle> > ma;
-	double* rh; //right hand vector
-
+private:
 	//for UMFPACK
 	int* Ap; //Ap[0] = 0; Ap[k] num of nonzero entries in the first k columns
 	int* Ai; //row of each nonzero entry, column-wise
 	double* Ax; //value of each nonzero entry, column-wise
-	
-	double* x;
 
-	// virtual int assembleStiff(Mesh<MyProblem> &mesh, MyProblem prob) = 0;
-	// virtual int getStiff(Element&, Mesh&, MyProblem prob) = 0;
-	virtual double integElement(Element ele){
-		return 0;
-	}
+	int convertToCSC(Mesh mesh);
+	int UMFSolve(Mesh mesh);
+	int SuperLUSolve(Mesh mesh);
+protected:
+	int dof;
+	std::vector< std::list<maColEle> > ma;
+	double* rh; //right hand vector
+	double* x; // the numerical solution
 
-	int solveSparse(Mesh<MyProblem> mesh, MyProblem prob);
-
-	int convertToCSC(Mesh<MyProblem> mesh);
-
-	int UMFSolve(Mesh<MyProblem> mesh);
-
-	int SuperLUSolve(Mesh<MyProblem> mesh);
+	// virtual int assembleStiff(Mesh &mesh, Problem& prob) = 0;
+	// virtual int getStiff(Element&, Mesh&, Problem& prob) = 0;
+	// virtual double integElement(Element ele){
+	// 	return 0;
+	// }
 
 	int addToMA(double a, int row, int col);
 
-	int fileOutputTriplet(Mesh<MyProblem> mesh, MyProblem prob);
-	int fileOutputRH(Mesh<MyProblem> mesh, MyProblem prob);
-	int fileOutputMA(Mesh<MyProblem> mesh, MyProblem prob);
-	
+	int fileOutputTriplet(Mesh mesh, Problem& prob);
+	int fileOutputRH(Mesh mesh, Problem& prob);
+	int fileOutputMA(Mesh mesh, Problem& prob);
+public:
+	int solveSparse(Mesh mesh, Problem& prob);
+
 	// ~BasicSolvingSystem() {} //need to deal with rh, ma, Ap... ?
 };
 
 bool maCompareFunc(const maColEle t1, const maColEle t2){  
 	return t1.row < t2.row;  
 } 
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::solveSparse(Mesh<MyProblem> mesh, MyProblem prob)
+int BasicSolvingSystem::solveSparse(Mesh mesh, Problem& prob)
 {
 	convertToCSC(mesh);
 	if(prob.parameters.solPack == SolPack::UMFPACK)
@@ -77,8 +71,7 @@ int BasicSolvingSystem<MyProblem>::solveSparse(Mesh<MyProblem> mesh, MyProblem p
 }
 
 // convert the list-stored matrix to Compressed Sparse Column (CSC)
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::convertToCSC(Mesh<MyProblem> mesh)
+int BasicSolvingSystem::convertToCSC(Mesh mesh)
 {
 #ifdef __SOLVESYS_DEBUG
 	std::cout << "start converting to UMFPACK structure" << std::endl;
@@ -115,8 +108,7 @@ int BasicSolvingSystem<MyProblem>::convertToCSC(Mesh<MyProblem> mesh)
 
 	return 0;
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::UMFSolve(Mesh<MyProblem> mesh)
+int BasicSolvingSystem::UMFSolve(Mesh mesh)
 {
 
 #ifdef __SOLVESYS_DEBUG
@@ -144,8 +136,7 @@ int BasicSolvingSystem<MyProblem>::UMFSolve(Mesh<MyProblem> mesh)
 #endif
 	return 0;
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::SuperLUSolve(Mesh<MyProblem> mesh)
+int BasicSolvingSystem::SuperLUSolve(Mesh mesh)
 {
 
 #ifdef __SOLVESYS_DEBUG
@@ -196,8 +187,7 @@ int BasicSolvingSystem<MyProblem>::SuperLUSolve(Mesh<MyProblem> mesh)
 
 	return 0;
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::addToMA(double a, int row, int col)
+int BasicSolvingSystem::addToMA(double a, int row, int col)
 {
 	if(a == 0) return 0;
 
@@ -219,8 +209,7 @@ int BasicSolvingSystem<MyProblem>::addToMA(double a, int row, int col)
 
 	return 0;
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::fileOutputTriplet(Mesh<MyProblem> mesh, MyProblem prob)
+int BasicSolvingSystem::fileOutputTriplet(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".triplet").c_str());
 
@@ -233,8 +222,7 @@ int BasicSolvingSystem<MyProblem>::fileOutputTriplet(Mesh<MyProblem> mesh, MyPro
 
 	return 0;
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::fileOutputRH(Mesh<MyProblem> mesh, MyProblem prob)
+int BasicSolvingSystem::fileOutputRH(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".rh").c_str());
 
@@ -243,8 +231,7 @@ int BasicSolvingSystem<MyProblem>::fileOutputRH(Mesh<MyProblem> mesh, MyProblem 
 
 	return 0;		
 }
-template <typename MyProblem>
-int BasicSolvingSystem<MyProblem>::fileOutputMA(Mesh<MyProblem> mesh, MyProblem prob)
+int BasicSolvingSystem::fileOutputMA(Mesh mesh, Problem& prob)
 {
 	std::ofstream fout((prob.parameters.meshFilename + ".ma").c_str());
 

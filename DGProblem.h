@@ -10,9 +10,7 @@
 class DGProblem: public Problem
 {
 public:
-	double epsilon;
-	double sigma0;
-	double beta0;
+
 
 	double f(double x, double y){
 		return 3 * cos(x) * sin(y);
@@ -22,7 +20,7 @@ public:
 		return cos(x) * sin(y);
 	}
 	// read parameters from an input file
-	int initDGProblem(int argc, char const *argv[]);
+	int initProblem(int argc, char const *argv[]);
 };
 
 #endif
