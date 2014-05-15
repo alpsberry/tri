@@ -3,14 +3,14 @@
 int main(int argc, char const *argv[])
 {
 	DGProblem prob;
-	if(prob.initDGProblem(argc, argv) == 1)
+	if(prob.initProblem(argc, argv) == 1)
 		return 1;
 
-	Mesh<DGProblem> mesh;
+	Mesh mesh;
 	if(mesh.initMesh(prob) == 1)
 		return 1;
 
-	DGSolvingSystem<DGProblem> solSys;
+	DGSolvingSystem solSys;
 	solSys.assembleStiff(mesh, prob);
 	solSys.solveSparse(mesh, prob);
 	solSys.triOutput(prob, mesh);
