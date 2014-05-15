@@ -19,6 +19,10 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> May 15
+* add the part of computing error in H1 norm
+* remove template, clean some code and add some comments
+>
 > May 14
 * fix the part of computing error in L2 norm
 >
