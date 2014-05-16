@@ -13,9 +13,9 @@ class DGSolvingSystem:public BasicSolvingSystem
 	const int LocalDimension = 3;
 	double penaltyOver3, penaltyOver6;
 	
-	int retrive_localDof_count_element_index(Mesh &mesh);
+	int retrive_dof_count_element_dofIndex(Mesh &mesh); // assign dof to each element and return the total dof
 
-	void calcDetBEOnMesh(Mesh &mesh);
+	void calcDetBEOnMesh(Mesh &mesh); // calculate detBE for each element on mesh
 
 	std::vector< std::vector<double> > elementInteg(Element ele, Mesh mesh);
 
@@ -23,13 +23,13 @@ class DGSolvingSystem:public BasicSolvingSystem
 
 	int edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22);
 
-	int edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11);
+	int edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11, std::vector<double> &rhs);
 
 	int assembleElement(Element ele, Mesh mesh, Problem& prob);
 
 	int assembleEdge(Edge edge, Mesh mesh, Problem& prob);
 
-	double innerProduct(std::vector<double> x, std::vector<double> y);
+	double innerProduct(std::vector<double> x, std::vector<double> y); // the inner product of two two-dimensional vector
 	
 	double penaltyTerm(Edge edge, int v1, int v2);
 	
@@ -42,11 +42,10 @@ class DGSolvingSystem:public BasicSolvingSystem
 	int getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, std::vector<double> integ_e1, std::vector<double> integ_e2, double eps,
 		std::vector<double> ne, std::vector< std::vector<double> > grad_E1, std::vector< std::vector<double> > grad_E2, int sign1, int sing2, int sing3);
 
-	int consoleOutput(Mesh mesh);
+	void computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1); // compute error in L2 and H1 norm
 
+	int consoleOutput(Mesh mesh, Problem& prob);
 	int fileOutput(Mesh mesh, Problem& prob);
-	
-	void computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1);
 
 public:
 
@@ -87,50 +86,31 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
 		   x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
 
 	double rec_2detBE = 0.5 / ele.detBE;
-	double detBE_over_12 = ele.detBE / 12.0;
-	double detBE_over_24 = ele.detBE / 24.0;
+	// double detBE_over_12 = ele.detBE / 12.0;
+	// double detBE_over_24 = ele.detBE / 24.0;
 
-	for(int vi = 0, row = 0; vi < LocalDimension; ++vi)
-	{
-		if(mesh.vertex[ele.vertex[vi] - 1].bctype > 0)
-			continue;
-		
-		for(int vj = vi, col = row; vj < LocalDimension; ++vj) // only calculate the upper triangle part of the matrix
+	double detBE_over_12 = 0;
+	double detBE_over_24 = 0;
+
+	vector< vector<double> > vecGrad(3);
+	vecGrad[0].push_back(y2 - y3);
+	vecGrad[0].push_back(x3 - x2);
+	vecGrad[1].push_back(y3 - y1);	
+	vecGrad[1].push_back(x1 - x3);
+	vecGrad[2].push_back(y1 - y2);	
+	vecGrad[2].push_back(x2 - x1);
+
+	for(int i = 0; i < 3; i++)
+		for(int j = i; j < 3; j++)
 		{
-			if(mesh.vertex[ele.vertex[vj] - 1].bctype > 0)
-				continue;
-
-			double tempInteg;
-			if(vi == 0){
-				switch(vj){
-					case 0:{tempInteg = ((y2 - y3) * (y2 - y3) + (x3 - x2) * (x3 - x2)) * rec_2detBE + detBE_over_12; break;}
-					case 1:{tempInteg = ((y2 - y3) * (y3 - y1) + (x3 - x2) * (x1 - x3)) * rec_2detBE + detBE_over_24; break;}
-					case 2:{tempInteg = ((y2 - y3) * (y1 - y2) + (x3 - x2) * (x2 - x1)) * rec_2detBE + detBE_over_24; break;}
-				}
-			}
-			else if(vi == 1){
-				switch(vj){
-					case 1:{tempInteg = ((y3 - y1) * (y3 - y1) + (x1 - x3) * (x1 - x3)) * rec_2detBE + detBE_over_12; break;}
-					case 2:{tempInteg = ((y3 - y1) * (y1 - y2) + (x1 - x3) * (x2 - x1)) * rec_2detBE + detBE_over_24; break;}
-				}
-			}
+			vecElementInteg[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) * rec_2detBE);
+			if(i == j)
+				vecElementInteg[i][j] += detBE_over_12;
 			else{
-				tempInteg = ((y1 - y2) * (y1 - y2) + (x2 - x1) * (x2 - x1)) * rec_2detBE + detBE_over_12;
+				vecElementInteg[i][j] += detBE_over_24;
+				vecElementInteg[j].push_back(vecElementInteg[i][j]);
 			}
-
-			vecElementInteg[row].push_back(tempInteg);
-			if(row != col)
-				vecElementInteg[col].push_back(tempInteg); // because of symmetry
-
-	#ifdef __DGSOLVESYS_DEBUG_LV2
-				cout << "  global " << ele.vertex[vi] << " local " << vi
-						  << " and global " << ele.vertex[vj] << " local " << vj
-						  << " integ = " << tempInteg << endl;
-	#endif
-			++col;
 		}
-		++row;
-	}
 
 	return vecElementInteg;
 }
@@ -152,8 +132,8 @@ vector<double> DGSolvingSystem::elementIntegRhs(Element ele, Mesh mesh, Problem&
 	double detBE_over_12 = ele.detBE / 12.0;
 
 	for(int vi = 0; vi < LocalDimension; ++vi){
-		if(mesh.vertex[ele.vertex[vi] - 1].bctype > 0)
-			continue;
+		// if(mesh.vertex[ele.vertex[vi] - 1].bctype > 0)
+		// 	continue;
 
 		double a = 0;
 		for(int i = 0; i < ele.vertex.size(); i++){
@@ -426,13 +406,13 @@ int DGSolvingSystem::getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Elem
 {
 	int row(0), col(0);
 	for(int iver = 0; iver != E1.vertex.size(); ++iver){
-		if(mesh.vertex[ E1.vertex[iver] - 1 ].bctype > 0)
-			continue;
+		// if(mesh.vertex[ E1.vertex[iver] - 1 ].bctype > 0)
+		// 	continue;
 		col = 0;
 		for(int jver = 0; jver != E2.vertex.size(); ++jver)
 		{
-			if(mesh.vertex[ E2.vertex[jver] - 1 ].bctype > 0)
-				continue;
+			// if(mesh.vertex[ E2.vertex[jver] - 1 ].bctype > 0)
+			// 	continue;
 			M[row][col] = sign1 * integ_e1[iver] * innerProduct(grad_E2[jver], ne) + sign2 * eps * integ_e2[jver] * innerProduct(grad_E1[iver], ne);
 			M[row][col] += sign3 * penaltyTerm(edge, E2.vertex[jver], E1.vertex[iver]);
 			++col;
@@ -523,7 +503,7 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M
 	return 0;
 }
 
-int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11)
+int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M11, vector<double> &rhs)
 {
 	if(edge.neighborElement.size() != 1){
 		cout << "invalid call in edge integ, element size not equal to 1" << endl;
@@ -553,26 +533,41 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M
 	vector<double> integ_e1;	
 	calcNormalVectorAndIntegOnEdge(edge, mesh, ne, integ_e1); // normal vector, not unit, actualy |e| / 2 * n_e
 
-	#ifdef __DGSOLVESYS_DEBUG_EDGE
-		cout << "  normal vector on boundary edge " << edge.index
-			 << " = (" << ne[0] << ", " << ne[1] << ")" << endl;
-	#endif
+	// #ifdef __DGSOLVESYS_DEBUG_EDGE
+	// 	cout << "  normal vector on boundary edge " << edge.index
+	// 		 << " = (" << ne[0] << ", " << ne[1] << ")" << endl;
+	// #endif
 
-	#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  vertices of E1 = (" << E1.vertex[0]
-				 << ", " << E1.vertex[1] << ", "
-				 << E1.vertex[2] << "), integ on edge = ("
-				 << integ_e1[0] << ", " << integ_e1[1]
-				 << ", " << integ_e1[2] << ")" << endl;
-	#endif
+	// #ifdef __DGSOLVESYS_DEBUG_EDGE
+	// 		cout << "  vertices of E1 = (" << E1.vertex[0]
+	// 			 << ", " << E1.vertex[1] << ", "
+	// 			 << E1.vertex[2] << "), integ on edge = ("
+	// 			 << integ_e1[0] << ", " << integ_e1[1]
+	// 			 << ", " << integ_e1[2] << ")" << endl;
+	// #endif
 
 	initM(M11, E1.localDof);
 	const double eps = prob.epsilon;
-	// const double penalty = prob.sigma0;
 	// M11
 
 	getMii(mesh, edge, M11, E1, E1, integ_e1, integ_e1, eps, ne, grad_E1, grad_E1, -1, 1, 1);
 
+	double eps_int_e_gd = 0; // actually 2 * \epsilon * int_e(g_D) / |e|, 2 / |e| is not divided here since the normal vector ne is not unified
+	for(int iver: E1.vertex){
+		if(iver == edge.vertex[0] || iver == edge.vertex[1])
+			eps_int_e_gd += prob.gd(mesh.vertex[iver - 1].x, mesh.vertex[iver - 1].y);
+	}
+	eps_int_e_gd *= eps;
+	
+	rhs.resize(3);
+	for(int i = 0; i < 3; i++)
+	{
+		int iver = E1.vertex[i];
+		if(iver != edge.vertex[0] && iver != edge.vertex[1])
+			rhs[i] = innerProduct(grad_E1[i], ne) * eps_int_e_gd;
+		else
+			rhs[i] = innerProduct(grad_E1[i], ne) * eps_int_e_gd + prob.sigma0 / 2.0 * prob.gd(mesh.vertex[iver - 1].x, mesh.vertex[iver - 1].y);
+	}
 	return 0;
 }
 
@@ -587,112 +582,98 @@ int DGSolvingSystem::assembleEdge(Edge edge, Mesh mesh, Problem& prob)
 		edgeInteg(edge, mesh, prob, M11, M12, M21, M22);
 		
 		// M11
-		#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  M11" << endl;
-		#endif
+		// #ifdef __DGSOLVESYS_DEBUG_EDGE
+		// 	cout << "  M11" << endl;
+		// #endif
 		for(int row = 0; row != M11.size(); ++row)
 			for(int col = 0; col != M11[row].size(); ++col){
 				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
-			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.dofIndex + row
-						 << " , " << E1.dofIndex + col << ") = "
-						 << M11[row][col] << endl;
-			#endif
+			// #ifdef __DGSOLVESYS_DEBUG_EDGE
+			// 		cout << "   ( " << E1.dofIndex + row
+			// 			 << " , " << E1.dofIndex + col << ") = "
+			// 			 << M11[row][col] << endl;
+			// #endif
 
 			}
 
 		// M12
-		#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  M12" << endl;
-		#endif
+		// #ifdef __DGSOLVESYS_DEBUG_EDGE
+		// 	cout << "  M12" << endl;
+		// #endif
 		for(int row = 0; row != M12.size(); ++row)
 			for(int col = 0; col != M12[row].size(); ++col){
 				this -> addToMA(M12[row][col], E1.dofIndex + row, E2.dofIndex + col);
-			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.dofIndex + row
-						 << " , " << E2.dofIndex + col << ") = "
-						 << M12[row][col] << endl;
-			#endif
+			// #ifdef __DGSOLVESYS_DEBUG_EDGE
+			// 		cout << "   ( " << E1.dofIndex + row
+			// 			 << " , " << E2.dofIndex + col << ") = "
+			// 			 << M12[row][col] << endl;
+			// #endif
 			}
 
 		// M21
-		#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  M21" << endl;
-		#endif
+		// #ifdef __DGSOLVESYS_DEBUG_EDGE
+		// 	cout << "  M21" << endl;
+		// #endif
 		for(int row = 0; row != M21.size(); ++row)
 			for(int col = 0; col != M21[row].size(); ++col){
 				this -> addToMA(M21[row][col], E2.dofIndex + row, E1.dofIndex + col);
-			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E2.dofIndex + row
-						 << " , " << E1.dofIndex + col << ") = "
-						 << M21[row][col] << endl;
-			#endif
+			// #ifdef __DGSOLVESYS_DEBUG_EDGE
+			// 		cout << "   ( " << E2.dofIndex + row
+			// 			 << " , " << E1.dofIndex + col << ") = "
+			// 			 << M21[row][col] << endl;
+			// #endif
 			}
 		
 		// M22
-		#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  M22" << endl;
-		#endif
+		// #ifdef __DGSOLVESYS_DEBUG_EDGE
+		// 	cout << "  M22" << endl;
+		// #endif
 		for(int row = 0; row != M22.size(); ++row)
 			for(int col = 0; col != M22[row].size(); ++col){
 				this -> addToMA(M22[row][col], E2.dofIndex + row, E2.dofIndex + col);
-			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E2.dofIndex + row
-						 << " , " << E2.dofIndex + col << ") = "
-						 << M22[row][col] << endl;
-			#endif
+			// #ifdef __DGSOLVESYS_DEBUG_EDGE
+			// 		cout << "   ( " << E2.dofIndex + row
+			// 			 << " , " << E2.dofIndex + col << ") = "
+			// 			 << M22[row][col] << endl;
+			// #endif
 			}
 	}
 	else{
-		edgeInteg(edge, mesh, prob, M11);
+		vector<double> rhs;
+		edgeInteg(edge, mesh, prob, M11, rhs);
 		
-		// M11
-		#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << "  M11" << endl;
-		#endif
+		// // M11
+		// #ifdef __DGSOLVESYS_DEBUG_EDGE
+		// 	cout << "  M11" << endl;
+		// #endif
 		for(int row = 0; row != M11.size(); ++row)
 			for(int col = 0; col != M11[row].size(); ++col){
 				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
-			#ifdef __DGSOLVESYS_DEBUG_EDGE
-					cout << "   ( " << E1.dofIndex + row
-						 << " , " << E1.dofIndex + col << ") = "
-						 << M11[row][col] << endl;
-			#endif
+			// #ifdef __DGSOLVESYS_DEBUG_EDGE
+			// 		cout << "   ( " << E1.dofIndex + row
+			// 			 << " , " << E1.dofIndex + col << ") = "
+			// 			 << M11[row][col] << endl;
+			// #endif
 
 			}
+		for(int i = 0; i < 3; i++)
+			rh[E1.dofIndex + i] += rhs[i];
 	}
 
 
 	return 0;
 }
 
-int DGSolvingSystem::retrive_localDof_count_element_index(Mesh &mesh)
+int DGSolvingSystem::retrive_dof_count_element_dofIndex(Mesh &mesh)
 {
 	int dof(0);
-	// for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
-	// {
-	// 	if(itEle -> reftype == constNonrefined)
-	// 	{
-	// 		itEle -> dofIndex = dof;
-	// 		itEle -> localDof = LocalDimension;
-	// 		dof += LocalDimension;
-	// 	}
-	// }
-
-
 	for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
 	{
 		if(itEle -> reftype == constNonrefined)
 		{
 			itEle -> dofIndex = dof;
-			int tmpLocalDof = 0;
-			for(int ver : itEle -> vertex){
-				if(mesh.vertex[ver - 1].bctype == 0){
-					++dof;
-					++tmpLocalDof;
-				}
-			}
-			itEle -> localDof = tmpLocalDof;
+			itEle -> localDof = LocalDimension;
+			dof += LocalDimension;
 		}
 	}
 
@@ -707,15 +688,15 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 
 	clock_t t = clock();
 
-	this -> dof = retrive_localDof_count_element_index(mesh);
-	
-	this -> rh = new double [this -> dof];
-	memset(this -> rh, 0, (this -> dof) * sizeof(double));
-	this -> ma.resize(this -> dof);
-
+	this -> dof = retrive_dof_count_element_dofIndex(mesh); // get total dof
 	#ifdef __DGSOLVESYS_DEBUG
 		cout << " dof = " << this -> dof << endl;
 	#endif
+
+	// initialize rh, ma
+	this -> rh = new double [this -> dof];
+	memset(this -> rh, 0, (this -> dof) * sizeof(double));
+	this -> ma.resize(this -> dof);
 
 	calcDetBEOnMesh(mesh); //calculate det(B_E) for each element
 	
@@ -727,9 +708,9 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 		if(it -> reftype != constNonrefined)
 			continue;
 
-	#ifdef __DGSOLVESYS_DEBUG_LV2
-			cout << " assemble element " << k << endl;
-	#endif
+	// #ifdef __DGSOLVESYS_DEBUG_LV2
+	// 		cout << " assemble element " << k << endl;
+	// #endif
 
 		assembleElement(*it, mesh, prob);
 	}
@@ -743,6 +724,7 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 
 
 	t = clock();
+	
 	//calc penalty
 	penaltyOver3 = prob.sigma0 / 3.0;
 	penaltyOver6 = prob.sigma0 / 6.0;
@@ -754,9 +736,9 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 		if(it -> reftype != constNonrefined)
 			continue;
 
-	#ifdef __DGSOLVESYS_DEBUG_EDGE
-			cout << " assemble edge " << k << endl;
-	#endif
+	// #ifdef __DGSOLVESYS_DEBUG_EDGE
+	// 		cout << " assemble edge " << k << endl;
+	// #endif
 		assembleEdge(*it, mesh, prob);
 	}
 
@@ -773,7 +755,7 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
 	return 0;
 }
 
-int DGSolvingSystem::consoleOutput(Mesh mesh)
+int DGSolvingSystem::consoleOutput(Mesh mesh, Problem& prob)
 {
 	std::vector<Element>::iterator it;
 	int k(0);
@@ -784,6 +766,9 @@ int DGSolvingSystem::consoleOutput(Mesh mesh)
 		for(int ver : it -> vertex)
 			if(mesh.vertex[ver - 1].bctype == 0)
 				cout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
+			else
+				cout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " "
+					 << prob.gd(mesh.vertex[ver - 1].x, mesh.vertex[ver - 1].y) << std::endl;
 	}
 
 	return 0;
@@ -816,7 +801,7 @@ int DGSolvingSystem::fileOutput(Mesh mesh, Problem& prob)
 int DGSolvingSystem::triOutput(Problem& prob, Mesh mesh)
 {
 	if(prob.parameters.printResults)
-		consoleOutput(mesh);
+		consoleOutput(mesh, prob);
 	if(prob.parameters.fprintResults)
 		fileOutput(mesh, prob);
 	if(prob.parameters.fprintMA)
