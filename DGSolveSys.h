@@ -42,6 +42,8 @@ class DGSolvingSystem:public BasicSolvingSystem
 	int getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, std::vector<double> integ_e1, std::vector<double> integ_e2, double eps,
 		std::vector<double> ne, std::vector< std::vector<double> > grad_E1, std::vector< std::vector<double> > grad_E2, int sign1, int sing2, int sing3);
 
+	void addMiiToMA(VECMATRIX M, Element E1, Element E2);
+
 	void computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1); // compute error in L2 and H1 norm
 
 	int consoleOutput(Mesh mesh, Problem& prob);
@@ -93,12 +95,9 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
 	double detBE_over_24 = 0;
 
 	vector< vector<double> > vecGrad(3);
-	vecGrad[0].push_back(y2 - y3);
-	vecGrad[0].push_back(x3 - x2);
-	vecGrad[1].push_back(y3 - y1);	
-	vecGrad[1].push_back(x1 - x3);
-	vecGrad[2].push_back(y1 - y2);	
-	vecGrad[2].push_back(x2 - x1);
+	vecGrad[0].push_back(y2 - y3); vecGrad[0].push_back(x3 - x2);
+	vecGrad[1].push_back(y3 - y1); vecGrad[1].push_back(x1 - x3);
+	vecGrad[2].push_back(y1 - y2); vecGrad[2].push_back(x2 - x1);
 
 	for(int i = 0; i < 3; i++)
 		for(int j = i; j < 3; j++)
@@ -571,6 +570,13 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem& prob, VECMATRIX &M
 	return 0;
 }
 
+void DGSolvingSystem::addMiiToMA(VECMATRIX M, Element E1, Element E2)
+{
+	for(int row = 0; row != M.size(); ++row)
+		for(int col = 0; col != M[row].size(); ++col)
+			this -> addToMA(M[row][col], E1.dofIndex + row, E2.dofIndex + col);
+}
+
 int DGSolvingSystem::assembleEdge(Edge edge, Mesh mesh, Problem& prob)
 {
 	VECMATRIX M11, M12, M21, M22;
@@ -580,82 +586,19 @@ int DGSolvingSystem::assembleEdge(Edge edge, Mesh mesh, Problem& prob)
 		Element &E2 = mesh.element[edge.neighborElement[1] - 1];
 
 		edgeInteg(edge, mesh, prob, M11, M12, M21, M22);
-		
-		// M11
-		// #ifdef __DGSOLVESYS_DEBUG_EDGE
-		// 	cout << "  M11" << endl;
-		// #endif
-		for(int row = 0; row != M11.size(); ++row)
-			for(int col = 0; col != M11[row].size(); ++col){
-				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
-			// #ifdef __DGSOLVESYS_DEBUG_EDGE
-			// 		cout << "   ( " << E1.dofIndex + row
-			// 			 << " , " << E1.dofIndex + col << ") = "
-			// 			 << M11[row][col] << endl;
-			// #endif
 
-			}
+		addMiiToMA(M11, E1, E1);
+		addMiiToMA(M12, E1, E2);		
+		addMiiToMA(M21, E2, E1);		
+		addMiiToMA(M22, E2, E2);		
 
-		// M12
-		// #ifdef __DGSOLVESYS_DEBUG_EDGE
-		// 	cout << "  M12" << endl;
-		// #endif
-		for(int row = 0; row != M12.size(); ++row)
-			for(int col = 0; col != M12[row].size(); ++col){
-				this -> addToMA(M12[row][col], E1.dofIndex + row, E2.dofIndex + col);
-			// #ifdef __DGSOLVESYS_DEBUG_EDGE
-			// 		cout << "   ( " << E1.dofIndex + row
-			// 			 << " , " << E2.dofIndex + col << ") = "
-			// 			 << M12[row][col] << endl;
-			// #endif
-			}
-
-		// M21
-		// #ifdef __DGSOLVESYS_DEBUG_EDGE
-		// 	cout << "  M21" << endl;
-		// #endif
-		for(int row = 0; row != M21.size(); ++row)
-			for(int col = 0; col != M21[row].size(); ++col){
-				this -> addToMA(M21[row][col], E2.dofIndex + row, E1.dofIndex + col);
-			// #ifdef __DGSOLVESYS_DEBUG_EDGE
-			// 		cout << "   ( " << E2.dofIndex + row
-			// 			 << " , " << E1.dofIndex + col << ") = "
-			// 			 << M21[row][col] << endl;
-			// #endif
-			}
-		
-		// M22
-		// #ifdef __DGSOLVESYS_DEBUG_EDGE
-		// 	cout << "  M22" << endl;
-		// #endif
-		for(int row = 0; row != M22.size(); ++row)
-			for(int col = 0; col != M22[row].size(); ++col){
-				this -> addToMA(M22[row][col], E2.dofIndex + row, E2.dofIndex + col);
-			// #ifdef __DGSOLVESYS_DEBUG_EDGE
-			// 		cout << "   ( " << E2.dofIndex + row
-			// 			 << " , " << E2.dofIndex + col << ") = "
-			// 			 << M22[row][col] << endl;
-			// #endif
-			}
 	}
 	else{
 		vector<double> rhs;
 		edgeInteg(edge, mesh, prob, M11, rhs);
 		
-		// // M11
-		// #ifdef __DGSOLVESYS_DEBUG_EDGE
-		// 	cout << "  M11" << endl;
-		// #endif
-		for(int row = 0; row != M11.size(); ++row)
-			for(int col = 0; col != M11[row].size(); ++col){
-				this -> addToMA(M11[row][col], E1.dofIndex + row, E1.dofIndex + col);
-			// #ifdef __DGSOLVESYS_DEBUG_EDGE
-			// 		cout << "   ( " << E1.dofIndex + row
-			// 			 << " , " << E1.dofIndex + col << ") = "
-			// 			 << M11[row][col] << endl;
-			// #endif
+		addMiiToMA(M11, E1, E1);
 
-			}
 		for(int i = 0; i < 3; i++)
 			rh[E1.dofIndex + i] += rhs[i];
 	}
@@ -668,14 +611,12 @@ int DGSolvingSystem::retrive_dof_count_element_dofIndex(Mesh &mesh)
 {
 	int dof(0);
 	for(auto itEle = mesh.element.begin(); itEle != mesh.element.end(); ++itEle)
-	{
 		if(itEle -> reftype == constNonrefined)
 		{
 			itEle -> dofIndex = dof;
 			itEle -> localDof = LocalDimension;
 			dof += LocalDimension;
 		}
-	}
 
 	return dof;
 }
@@ -852,9 +793,9 @@ void DGSolvingSystem::computeError(Mesh mesh, Problem& prob, double& errL2, doub
 	
 		errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
-		fout << v1.x << " " << v1.y << " " << r1 << std::endl;
-		fout << v2.x << " " << v2.y << " " << r2 << std::endl;
-		fout << v3.x << " " << v3.y << " " << r3 << std::endl;
+		fout << v1.x << " " << v1.y << " " << r1 << endl
+		     << v2.x << " " << v2.y << " " << r2 << endl
+		     << v3.x << " " << v3.y << " " << r3 << endl;
 		
 		errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
 	    	      + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;		
