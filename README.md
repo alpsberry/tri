@@ -19,6 +19,9 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> May 16
+* DG solver is able to deal with dirichlet boundary condition
+>
 > May 15
 * add the part of computing error in H1 norm
 * remove template, clean some code and add some comments
