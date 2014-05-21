@@ -10,29 +10,26 @@
 
 class DGSolvingSystem: public BasicSolvingSystem {
     const int LocalDimension = 3;
-    double penaltyOver3, penaltyOver6;
+    double penaltyOver6;
 
     int retrieve_dof_count_element_dofIndex(Mesh &mesh); // assign dof to each element and return the total dof
     void calcDetBEOnMesh(Mesh &mesh);                   // calculate detBE for each element on mesh
     double innerProduct(std::vector<double> x, std::vector<double> y); // the inner product of two two-dimensional vector
-    double dist(Vertex v1, Vertex v2);                  // distance between two vertices
     double dist(double x1, double y1, double x2, double y2);
     int vertexOnEdge(Vertex ver, Vertex v1, Vertex v2); // if ver is on the line of edge, edge is given by v1 and v2
-    double penaltyTerm(Edge edge, int v1, int v2);      // the penalty term J0 in DG bilinear form
     double penaltyTerm(Edge edge, int index_E1, int index_E2, int iver, int jver, std::vector< std::vector<double> > f_E1, std::vector< std::vector<double> > f_E2);
-
 
     std::vector< std::vector<double> > elementInteg(Element ele, Mesh mesh);
     std::vector<double> elementIntegRhs(Element ele, Mesh mesh, Problem &prob);
     int assembleElement(Element ele, Mesh mesh, Problem &prob);
 
-    int calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, std::vector<double> &ne,
-                                        std::vector< std::vector<double> > &integ_e);
-    int calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, std::vector<double> &ne,
-                                        std::vector< std::vector<double> > &f_E1, std::vector< std::vector<double> > &f_E2);
+    int calc_ne_and_f_on_edge(Edge edge, Mesh mesh, std::vector<double> &ne,
+                              std::vector< std::vector<double> > &integ_e);
+    int calc_ne_and_f_on_edge(Edge edge, Mesh mesh, std::vector<double> &ne,
+                              std::vector< std::vector<double> > &f_E1, std::vector< std::vector<double> > &f_E2);
     int getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2,
                std::vector< std::vector<double> > f_E1, std::vector< std::vector<double> > f_E2,
-               double eps, std::vector<double> ne, std::vector< std::vector<double> > grad_E1, std::vector< std::vector<double> > grad_E2,
+               double eps, std::vector<double> ne, std::vector<double> grad_ne_E1, std::vector<double> grad_ne_E2,
                int sign1, int sing2, int sing3);
     void addMiiToMA(VECMATRIX M, Element E1, Element E2);
     int edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22);
@@ -79,13 +76,6 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
            x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
            x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
 
-    double rec_2detBE = 0.5 / ele.detBE;
-    // double detBE_over_12 = ele.detBE / 12.0;
-    // double detBE_over_24 = ele.detBE / 24.0;
-
-    double detBE_over_12 = 0; // alpha = 0
-    double detBE_over_24 = 0; // alpha = 0
-
     vector< vector<double> > vecGrad(3);
     vecGrad[0].push_back(y2 - y3); vecGrad[0].push_back(x3 - x2);
     vecGrad[1].push_back(y3 - y1); vecGrad[1].push_back(x1 - x3);
@@ -93,13 +83,14 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
 
     for (int i = 0; i < 3; i++)
         for (int j = i; j < 3; j++) {
-            vecElementInteg[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) * rec_2detBE);
-            if (i == j)
-                vecElementInteg[i][j] += detBE_over_12;
-            else {
-                vecElementInteg[i][j] += detBE_over_24;
+            vecElementInteg[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) / ele.detBE / 2.0);
+            if (i != j) {
+                // vecElementInteg[i][j] += ele.detBE / 24; // alpha = 0, so this term is omitted
                 vecElementInteg[j].push_back(vecElementInteg[i][j]);
             }
+            // else {
+            //     vecElementInteg[i][j] += ele.detBE / 12; // alpha = 0, so this term is omitted
+            // }
         }
 
     return vecElementInteg;
@@ -129,9 +120,9 @@ int DGSolvingSystem::assembleElement(Element ele, Mesh mesh, Problem &prob)
     for (int row = 0; row != vecElementInteg.size(); ++row)
         for (int col = 0; col != vecElementInteg[row].size(); ++col) {
 
-    // #ifdef __DGSOLVESYS_DEBUG_LV2
-    //             cout << "  add to " << ele.dofIndex + row << ", " << ele.dofIndex + col << endl;
-    // #endif
+            // #ifdef __DGSOLVESYS_DEBUG_LV2
+            //             cout << "  add to " << ele.dofIndex + row << ", " << ele.dofIndex + col << endl;
+            // #endif
             this -> addToMA(vecElementInteg[row][col], ele.dofIndex + row, ele.dofIndex + col);
         }
 
@@ -140,18 +131,13 @@ int DGSolvingSystem::assembleElement(Element ele, Mesh mesh, Problem &prob)
     vecElementIntegRhs = elementIntegRhs(ele, mesh, prob);
     for (int i = 0; i != vecElementIntegRhs.size(); ++i) {
 
-    // #ifdef __DGSOLVESYS_DEBUG_LV2
-    //         cout << "  add rh to " << ele.dofIndex + i << endl;
-    // #endif
+        // #ifdef __DGSOLVESYS_DEBUG_LV2
+        //         cout << "  add rh to " << ele.dofIndex + i << endl;
+        // #endif
         this -> rh[ele.dofIndex + i] += vecElementIntegRhs[i];
     }
 
     return 0;
-}
-
-double DGSolvingSystem::dist(Vertex v1, Vertex v2)
-{
-    return sqrt((v1.x - v2.x) * (v1.x - v2.x) + (v1.y - v2.y) * (v1.y - v2.y));
 }
 
 double DGSolvingSystem::dist(double x1, double y1, double x2, double y2)
@@ -169,7 +155,7 @@ int DGSolvingSystem::vertexOnEdge(Vertex ver, Vertex v1, Vertex v2)
     return 0;
 }
 
-int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vector<double> &ne,
+int DGSolvingSystem::calc_ne_and_f_on_edge(Edge edge, Mesh mesh, vector<double> &ne,
         vector< vector<double> > &f_E1, vector< vector<double> > &f_E2)
 {
 
@@ -209,7 +195,7 @@ int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vecto
         std::swap(a2, a3);
         std::swap(b2, b3);
     }
-    
+
     ne.clear();
     ne.push_back( (b3 - b2) / 4.0 );
     ne.push_back( (a2 - a3) / 4.0 );
@@ -262,7 +248,7 @@ int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vecto
     return 0;
 }
 
-int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vector<double> &ne,
+int DGSolvingSystem::calc_ne_and_f_on_edge(Edge edge, Mesh mesh, vector<double> &ne,
         vector< vector<double> > &f_E1)
 {
     if (edge.neighborElement.size() != 1) {
@@ -338,18 +324,6 @@ void initM(VECMATRIX &M11, int dofE1)
         M11[i].resize(dofE1);
 }
 
-double DGSolvingSystem::penaltyTerm(Edge edge, int v1, int v2)
-{
-    // if any of vi, v2 is not on the edge, then the penalty term is 0
-    if ((v1 != edge.vertex[0] && v1 != edge.vertex[1]) || (v2 != edge.vertex[0] && v2 != edge.vertex[1]))
-        return 0;
-
-    if (v1 == v2)
-        return penaltyOver3; // i.e. sigma0 / 3.0
-    else
-        return penaltyOver6; // i.e. sigma0 / 6.0
-}
-
 double DGSolvingSystem::penaltyTerm(Edge edge, int index_E1, int index_E2, int iver, int jver, vector< vector<double> > f_E1, vector< vector<double> > f_E2)
 {
     if (index_E1 == index_E2)
@@ -361,8 +335,10 @@ double DGSolvingSystem::penaltyTerm(Edge edge, int index_E1, int index_E2, int i
 
 }
 
+// int DGSolvingSystem::getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, vector< vector<double> > f_E1, vector< vector<double> > f_E2, double eps,
+//                             vector<double> ne, vector< vector<double> > grad_E1, vector< vector<double> > grad_E2, int sign1, int sign2, int sign3)
 int DGSolvingSystem::getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Element E2, vector< vector<double> > f_E1, vector< vector<double> > f_E2, double eps,
-                            vector<double> ne, vector< vector<double> > grad_E1, vector< vector<double> > grad_E2, int sign1, int sign2, int sign3)
+                            vector<double> ne, vector<double> grad_ne_E1, vector<double> grad_ne_E2, int sign1, int sign2, int sign3)
 {
     int row(0), col(0);
     for (int iver = 0; iver != E1.vertex.size(); ++iver) {
@@ -372,19 +348,13 @@ int DGSolvingSystem::getMii(Mesh mesh, Edge edge, VECMATRIX &M, Element E1, Elem
         for (int jver = 0; jver != E2.vertex.size(); ++jver) {
             // if(mesh.vertex[ E2.vertex[jver] - 1 ].bctype > 0)
             //  continue;
-            M[row][col] =  sign1 * (f_E1[iver][0] + f_E1[iver][1]) * innerProduct(grad_E2[jver], ne)
-                           + sign2 * eps * (f_E2[jver][0] + f_E2[jver][1]) * innerProduct(grad_E1[iver], ne);
-            // double pen1 =  penaltyTerm(edge, E2.vertex[jver], E1.vertex[iver]) / penaltyOver6;
-            double pen = penaltyTerm(edge, E1.index, E2.index, iver, jver, f_E1, f_E2);
-            M[row][col] += sign3 * penaltyOver6 * pen;
-            // if(fabs(pen - pen1) > 0.0001)
-            // cout<<pen1 << "  " << pen<< "   " ;
-
+            M[row][col] =  sign1 * (f_E1[iver][0] + f_E1[iver][1]) * grad_ne_E2[jver]
+                           + sign2 * eps * (f_E2[jver][0] + f_E2[jver][1]) * grad_ne_E1[iver];
+            M[row][col] += sign3 * penaltyOver6 * penaltyTerm(edge, E1.index, E2.index, iver, jver, f_E1, f_E2);
             ++col;
         }
         ++row;
     }
-    // cout << endl;
 
     return 0;
 }
@@ -412,28 +382,19 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
            E2_y2(mesh.vertex[ E2.vertex[1] - 1].y),
            E2_y3(mesh.vertex[ E2.vertex[2] - 1].y);
 
-    double rec_detBE1 = 1.0 / E1.detBE;
-    double rec_detBE2 = 1.0 / E2.detBE;
-
-    vector< vector<double> > grad_E1(LocalDimension);
-    grad_E1[0].push_back((E1_y2 - E1_y3) * rec_detBE1);
-    grad_E1[0].push_back((E1_x3 - E1_x2) * rec_detBE1);
-    grad_E1[1].push_back((E1_y3 - E1_y1) * rec_detBE1);
-    grad_E1[1].push_back((E1_x1 - E1_x3) * rec_detBE1);
-    grad_E1[2].push_back((E1_y1 - E1_y2) * rec_detBE1);
-    grad_E1[2].push_back((E1_x2 - E1_x1) * rec_detBE1);
-
-    vector< vector<double> > grad_E2(LocalDimension);
-    grad_E2[0].push_back((E2_y2 - E2_y3) * rec_detBE2);
-    grad_E2[0].push_back((E2_x3 - E2_x2) * rec_detBE2);
-    grad_E2[1].push_back((E2_y3 - E2_y1) * rec_detBE2);
-    grad_E2[1].push_back((E2_x1 - E2_x3) * rec_detBE2);
-    grad_E2[2].push_back((E2_y1 - E2_y2) * rec_detBE2);
-    grad_E2[2].push_back((E2_x2 - E2_x1) * rec_detBE2);
-
     vector<double> ne;
     vector< vector<double> > f_E1, f_E2;
-    calc_ne_and_basis_integ_on_edge(edge, mesh, ne, f_E1, f_E2); // normal vector, not unit, actualy |e| / 4 * n_e
+    calc_ne_and_f_on_edge(edge, mesh, ne, f_E1, f_E2); // normal vector, not unit, actualy |e| / 4 * n_e
+
+    vector<double> grad_ne_E1;
+    grad_ne_E1.push_back( ((E1_y2 - E1_y3) * ne[0] + (E1_x3 - E1_x2) * ne[1]) / E1.detBE );
+    grad_ne_E1.push_back( ((E1_y3 - E1_y1) * ne[0] + (E1_x1 - E1_x3) * ne[1]) / E1.detBE );
+    grad_ne_E1.push_back( ((E1_y1 - E1_y2) * ne[0] + (E1_x2 - E1_x1) * ne[1]) / E1.detBE );
+
+    vector<double> grad_ne_E2;
+    grad_ne_E2.push_back( ((E2_y2 - E2_y3) * ne[0] + (E2_x3 - E2_x2) * ne[1]) / E2.detBE );
+    grad_ne_E2.push_back( ((E2_y3 - E2_y1) * ne[0] + (E2_x1 - E2_x3) * ne[1]) / E2.detBE );
+    grad_ne_E2.push_back( ((E2_y1 - E2_y2) * ne[0] + (E2_x2 - E2_x1) * ne[1]) / E2.detBE );
 
     // #ifdef __DGSOLVESYS_DEBUG_EDGE
     //      cout << "  normal vector from element " << edge.neighborElement[0]
@@ -460,11 +421,10 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
 
     const double eps = prob.epsilon;
 
-    getMii(mesh, edge, M11, E1, E1, f_E1, f_E1, eps, ne, grad_E1, grad_E1, -1,  1,  1);
-    getMii(mesh, edge, M12, E1, E2, f_E1, f_E2, eps, ne, grad_E1, grad_E2, -1, -1, -1);
-    getMii(mesh, edge, M21, E2, E1, f_E2, f_E1, eps, ne, grad_E2, grad_E1,  1,  1, -1);
-    getMii(mesh, edge, M22, E2, E2, f_E2, f_E2, eps, ne, grad_E2, grad_E2,  1, -1,  1);
-
+    getMii(mesh, edge, M11, E1, E1, f_E1, f_E1, eps, ne, grad_ne_E1, grad_ne_E1, -1,  1,  1);
+    getMii(mesh, edge, M12, E1, E2, f_E1, f_E2, eps, ne, grad_ne_E1, grad_ne_E2, -1, -1, -1);
+    getMii(mesh, edge, M21, E2, E1, f_E2, f_E1, eps, ne, grad_ne_E2, grad_ne_E1,  1,  1, -1);
+    getMii(mesh, edge, M22, E2, E2, f_E2, f_E2, eps, ne, grad_ne_E2, grad_ne_E2,  1, -1,  1);
     return 0;
 }
 
@@ -484,19 +444,14 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
            E1_y2(mesh.vertex[ E1.vertex[1] - 1].y),
            E1_y3(mesh.vertex[ E1.vertex[2] - 1].y);
 
-    double rec_detBE1 = 1.0 / E1.detBE;
-
-    vector< vector<double> > grad_E1(LocalDimension);
-    grad_E1[0].push_back((E1_y2 - E1_y3) * rec_detBE1);
-    grad_E1[0].push_back((E1_x3 - E1_x2) * rec_detBE1);
-    grad_E1[1].push_back((E1_y3 - E1_y1) * rec_detBE1);
-    grad_E1[1].push_back((E1_x1 - E1_x3) * rec_detBE1);
-    grad_E1[2].push_back((E1_y1 - E1_y2) * rec_detBE1);
-    grad_E1[2].push_back((E1_x2 - E1_x1) * rec_detBE1);
-
     vector<double> ne;
     vector< vector<double> > f_E1;
-    calc_ne_and_basis_integ_on_edge(edge, mesh, ne, f_E1); // normal vector, not unit, actualy |e| / 2 * n_e
+    calc_ne_and_f_on_edge(edge, mesh, ne, f_E1); // normal vector, not unit, actualy |e| / 2 * n_e
+
+    vector<double> grad_ne_E1;
+    grad_ne_E1.push_back( ((E1_y2 - E1_y3) * ne[0] + (E1_x3 - E1_x2) * ne[1]) / E1.detBE );
+    grad_ne_E1.push_back( ((E1_y3 - E1_y1) * ne[0] + (E1_x1 - E1_x3) * ne[1]) / E1.detBE );
+    grad_ne_E1.push_back( ((E1_y1 - E1_y2) * ne[0] + (E1_x2 - E1_x1) * ne[1]) / E1.detBE );
 
     // #ifdef __DGSOLVESYS_DEBUG_EDGE
     //  cout << "  normal vector on boundary edge " << edge.index
@@ -513,8 +468,10 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
 
     initM(M11, E1.localDof);
     const double eps = prob.epsilon;
+    
     // M11
-    getMii(mesh, edge, M11, E1, E1, f_E1, f_E1, eps, ne, grad_E1, grad_E1, -1, 1, 1);
+    getMii(mesh, edge, M11, E1, E1, f_E1, f_E1, eps, ne, grad_ne_E1, grad_ne_E1, -1, 1, 1);
+
 
     double eps_int_e_gd = 0; // actually 2 * \epsilon * int_e(g_D) / |e|, 2 / |e| is not divided here since the normal vector ne is not unified
     for (int iver : E1.vertex) {
@@ -527,9 +484,9 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
     for (int i = 0; i < 3; i++) {
         int iver = E1.vertex[i];
         if (iver != edge.vertex[0] && iver != edge.vertex[1])
-            rhs[i] = innerProduct(grad_E1[i], ne) * eps_int_e_gd;
+            rhs[i] = grad_ne_E1[i] * eps_int_e_gd;
         else
-            rhs[i] = innerProduct(grad_E1[i], ne) * eps_int_e_gd + prob.sigma0 / 2.0 * prob.gd(mesh.vertex[iver - 1].x, mesh.vertex[iver - 1].y);
+            rhs[i] = grad_ne_E1[i] * eps_int_e_gd + prob.sigma0 / 2.0 * prob.gd(mesh.vertex[iver - 1].x, mesh.vertex[iver - 1].y);
     }
     return 0;
 }
@@ -628,7 +585,6 @@ int DGSolvingSystem::assembleStiff(Mesh &mesh, Problem &prob)
     t = clock();
 
     //calc penalty
-    penaltyOver3 = prob.sigma0 / 3.0;
     penaltyOver6 = prob.sigma0 / 6.0;
 
     // assemble edge integral related items
