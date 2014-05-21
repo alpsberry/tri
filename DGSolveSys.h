@@ -71,9 +71,9 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
     VECMATRIX vecElementInteg;
     vecElementInteg.resize(ele.localDof);
 
-#ifdef __DGSOLVESYS_DEBUG_LV2
-    cout << "  local dof = " << ele.localDof << endl;
-#endif
+    // #ifdef __DGSOLVESYS_DEBUG_LV2
+    //     cout << "  local dof = " << ele.localDof << endl;
+    // #endif
 
     double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
            x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
@@ -129,9 +129,9 @@ int DGSolvingSystem::assembleElement(Element ele, Mesh mesh, Problem &prob)
     for (int row = 0; row != vecElementInteg.size(); ++row)
         for (int col = 0; col != vecElementInteg[row].size(); ++col) {
 
-#ifdef __DGSOLVESYS_DEBUG_LV2
-            cout << "  add to " << ele.dofIndex + row << ", " << ele.dofIndex + col << endl;
-#endif
+    // #ifdef __DGSOLVESYS_DEBUG_LV2
+    //             cout << "  add to " << ele.dofIndex + row << ", " << ele.dofIndex + col << endl;
+    // #endif
             this -> addToMA(vecElementInteg[row][col], ele.dofIndex + row, ele.dofIndex + col);
         }
 
@@ -140,9 +140,9 @@ int DGSolvingSystem::assembleElement(Element ele, Mesh mesh, Problem &prob)
     vecElementIntegRhs = elementIntegRhs(ele, mesh, prob);
     for (int i = 0; i != vecElementIntegRhs.size(); ++i) {
 
-#ifdef __DGSOLVESYS_DEBUG_LV2
-        cout << "  add rh to " << ele.dofIndex + i << endl;
-#endif
+    // #ifdef __DGSOLVESYS_DEBUG_LV2
+    //         cout << "  add rh to " << ele.dofIndex + i << endl;
+    // #endif
         this -> rh[ele.dofIndex + i] += vecElementIntegRhs[i];
     }
 
@@ -181,7 +181,7 @@ int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vecto
     Element &E1 = mesh.element[ edge.neighborElement[0] - 1];
     Element &E2 = mesh.element[ edge.neighborElement[1] - 1];
 
-    double x1, x2, x3, y1, y2, y3, u2, u3, v2, v3;
+    double x1, x2, x3, y1, y2, y3, a2, a3, b2, b3;
 
     int index_E1_v1 = -1;
     for (int ver : E1.vertex) {
@@ -200,28 +200,28 @@ int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vecto
     x3 = mesh.vertex[E1.vertex[(index_E1_v1 + 2) % 3] - 1].x;
     y3 = mesh.vertex[E1.vertex[(index_E1_v1 + 2) % 3] - 1].y;
 
-    ne.clear();
-    ne.push_back( (y3 - y2) / 4.0 );
-    ne.push_back( (x2 - x3) / 4.0 );
+    a2 = mesh.vertex[edge.vertex[0] - 1].x;
+    b2 = mesh.vertex[edge.vertex[0] - 1].y;
+    a3 = mesh.vertex[edge.vertex[1] - 1].x;
+    b3 = mesh.vertex[edge.vertex[1] - 1].y;
 
-    u2 = mesh.vertex[edge.vertex[0] - 1].x;
-    v2 = mesh.vertex[edge.vertex[0] - 1].y;
-    u3 = mesh.vertex[edge.vertex[1] - 1].x;
-    v3 = mesh.vertex[edge.vertex[1] - 1].y;
-
-    if ( ((u2 - x1) * (v3 - y1) - (u3 - x1) * (v2 - y1)) < 0 ) {
-        std::swap(u2, u3);
-        std::swap(v2, v3);
+    if ( ((a2 - x1) * (b3 - y1) - (a3 - x1) * (b2 - y1)) < 0 ) {
+        std::swap(a2, a3);
+        std::swap(b2, b3);
     }
+    
+    ne.clear();
+    ne.push_back( (b3 - b2) / 4.0 );
+    ne.push_back( (a2 - a3) / 4.0 );
 
     f_E1.resize(3);
     f_E1[index_E1_v1] = vector<double> {0, 0};
 
     double length_v2v3 = dist(x2, y2, x3, y3);
-    f_E1[(index_E1_v1 + 1) % 3].push_back( dist(u2, v2, x3, y3) / length_v2v3 );
-    f_E1[(index_E1_v1 + 1) % 3].push_back( dist(u3, v3, x3, y3) / length_v2v3 );
-    f_E1[(index_E1_v1 + 2) % 3].push_back( dist(u2, v2, x2, y2) / length_v2v3 );
-    f_E1[(index_E1_v1 + 2) % 3].push_back( dist(u3, v3, x2, y2) / length_v2v3 );
+    f_E1[(index_E1_v1 + 1) % 3].push_back( dist(a2, b2, x3, y3) / length_v2v3 );
+    f_E1[(index_E1_v1 + 1) % 3].push_back( dist(a3, b3, x3, y3) / length_v2v3 );
+    f_E1[(index_E1_v1 + 2) % 3].push_back( dist(a2, b2, x2, y2) / length_v2v3 );
+    f_E1[(index_E1_v1 + 2) % 3].push_back( dist(a3, b3, x2, y2) / length_v2v3 );
 
     int index_E2_v1 = -1;
     for (int ver : E2.vertex) {
@@ -240,24 +240,24 @@ int DGSolvingSystem::calc_ne_and_basis_integ_on_edge(Edge edge, Mesh mesh, vecto
     x3 = mesh.vertex[E2.vertex[(index_E2_v1 + 2) % 3] - 1].x;
     y3 = mesh.vertex[E2.vertex[(index_E2_v1 + 2) % 3] - 1].y;
 
-    u2 = mesh.vertex[edge.vertex[0] - 1].x;
-    v2 = mesh.vertex[edge.vertex[0] - 1].y;
-    u3 = mesh.vertex[edge.vertex[1] - 1].x;
-    v3 = mesh.vertex[edge.vertex[1] - 1].y;
+    a2 = mesh.vertex[edge.vertex[0] - 1].x;
+    b2 = mesh.vertex[edge.vertex[0] - 1].y;
+    a3 = mesh.vertex[edge.vertex[1] - 1].x;
+    b3 = mesh.vertex[edge.vertex[1] - 1].y;
 
-    if ( ((u2 - x1) * (v3 - y1) - (u3 - x1) * (v2 - y1)) < 0 ) {
-        std::swap(u2, u3);
-        std::swap(v2, v3);
+    if ( ((a2 - x1) * (b3 - y1) - (a3 - x1) * (b2 - y1)) < 0 ) {
+        std::swap(a2, a3);
+        std::swap(b2, b3);
     }
 
     f_E2.resize(3);
     f_E2[index_E2_v1] = vector<double> {0, 0};
 
     length_v2v3 = dist(x2, y2, x3, y3);
-    f_E2[(index_E2_v1 + 1) % 3].push_back( dist(u2, v2, x3, y3) / length_v2v3 );
-    f_E2[(index_E2_v1 + 1) % 3].push_back( dist(u3, v3, x3, y3) / length_v2v3 );
-    f_E2[(index_E2_v1 + 2) % 3].push_back( dist(u2, v2, x2, y2) / length_v2v3 );
-    f_E2[(index_E2_v1 + 2) % 3].push_back( dist(u3, v3, x2, y2) / length_v2v3 );
+    f_E2[(index_E2_v1 + 1) % 3].push_back( dist(a2, b2, x3, y3) / length_v2v3 );
+    f_E2[(index_E2_v1 + 1) % 3].push_back( dist(a3, b3, x3, y3) / length_v2v3 );
+    f_E2[(index_E2_v1 + 2) % 3].push_back( dist(a2, b2, x2, y2) / length_v2v3 );
+    f_E2[(index_E2_v1 + 2) % 3].push_back( dist(a3, b3, x2, y2) / length_v2v3 );
 
     return 0;
 }
