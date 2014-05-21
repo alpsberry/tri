@@ -19,6 +19,10 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> May 21
+* correct the edge integral part, now deal with mesh with hanging nodes correctly
+* code style formatted
+>
 > May 16
 * DG solver is able to deal with dirichlet boundary condition
 >
