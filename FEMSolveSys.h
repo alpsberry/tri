@@ -10,311 +10,295 @@
 // the variational form
 //   \int\nolimits_{\Omega} \nabla u \nabla v + uv = \int\nolimits_{\Omega} fv
 
-// here vertex.index is associated with its index in dof, not the index in all the vertices
-// thus only vertex with bctype=0 is defined with this value
-
 #include "solveSys.h"
 
 using std::vector;
 
-class FEMSolvingSystem: public BasicSolvingSystem
-{
+class FEMSolvingSystem: public BasicSolvingSystem {
 public:
-	VECMATRIX integA(Element &ele, Mesh mesh, Problem& prob);
+    VECMATRIX integA(Element &ele, Mesh mesh, Problem &prob);
 
-	double integARH(Element ele, Mesh mesh, int vi, Problem& prob);
+    double integARH(Element ele, Mesh mesh, int vi, Problem &prob);
 
-	int getStiff(Element& ele, Mesh &mesh, Problem& prob);
+    int getStiff(Element &ele, Mesh &mesh, Problem &prob);
 
-	int retrive_dof_count_vertex_index(Mesh &mesh);
+    int retrive_dof_count_vertex_index(Mesh &mesh);
 
-	int assembleStiff(Mesh &mesh, Problem& prob);
+    int assembleStiff(Mesh &mesh, Problem &prob);
 
-	int consoleOutput(Mesh mesh, Problem& prob);
+    int consoleOutput(Mesh mesh, Problem &prob);
 
-	int fileOutput(Mesh mesh, Problem& prob);
+    int fileOutput(Mesh mesh, Problem &prob);
 
-	int triOutput(Problem& prob, Mesh mesh);
+    int triOutput(Problem &prob, Mesh mesh);
 
-	void computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1);
+    void computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1);
 
 };
 
 double innerProduct(vector<double> x, vector<double> y)
 {
-	return x[0] * y[0] + x[1] * y[1];
+    return x[0] * y[0] + x[1] * y[1];
 }
 
 void calcDetBEOnMesh(Mesh &mesh)
 {
-	for(Element &ele : mesh.element){
-		double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
-		   x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
-		   x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
+    for (Element &ele : mesh.element) {
+        double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
+               x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
+               x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
 
-		ele.detBE = fabs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)); // absolute value needed here?
-	}
+        ele.detBE = fabs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)); // absolute value needed here?
+    }
 }
 
 
 // gradInteg = \int_E \nabla \phi_i \nabla v
 // timeInteg = \int_E uv
 // nodal basis are used here
-VECMATRIX FEMSolvingSystem::integA(Element &ele, Mesh mesh, Problem& prob)
+VECMATRIX FEMSolvingSystem::integA(Element &ele, Mesh mesh, Problem &prob)
 {
-	VECMATRIX vecIntegA;
-	vecIntegA.resize(3);
+    VECMATRIX vecIntegA;
+    vecIntegA.resize(3);
 
-	double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
-		   x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
-		   x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
+    double x1(mesh.vertex[ele.vertex[0] - 1].x), y1(mesh.vertex[ele.vertex[0] - 1].y),
+           x2(mesh.vertex[ele.vertex[1] - 1].x), y2(mesh.vertex[ele.vertex[1] - 1].y),
+           x3(mesh.vertex[ele.vertex[2] - 1].x), y3(mesh.vertex[ele.vertex[2] - 1].y);
 
-	// if(ele.detBE == 0){
-	// 	ele.detBE = fabs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1));
-	// }
+    double rec_2detBE = 0.5 / ele.detBE;
+    double detBE_over_12 = ele.detBE / 12.0;
+    double detBE_over_24 = ele.detBE / 24.0;
 
-	double rec_2detBE = 0.5 / ele.detBE;
-	double detBE_over_12 = ele.detBE / 12.0;
-	double detBE_over_24 = ele.detBE / 24.0;
+    vector< vector<double> > vecGrad(3);
+    vecGrad[0].push_back(y2 - y3);
+    vecGrad[0].push_back(x3 - x2);
+    vecGrad[1].push_back(y3 - y1);
+    vecGrad[1].push_back(x1 - x3);
+    vecGrad[2].push_back(y1 - y2);
+    vecGrad[2].push_back(x2 - x1);
 
-	vector< vector<double> > vecGrad(3);
-	vecGrad[0].push_back(y2 - y3);
-	vecGrad[0].push_back(x3 - x2);
-	vecGrad[1].push_back(y3 - y1);	
-	vecGrad[1].push_back(x1 - x3);
-	vecGrad[2].push_back(y1 - y2);	
-	vecGrad[2].push_back(x2 - x1);
+    for (int i = 0; i < 3; i++)
+        for (int j = i; j < 3; j++) {
+            vecIntegA[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) * rec_2detBE);
+            if (i == j)
+                vecIntegA[i][j] += detBE_over_12;
+            else {
+                vecIntegA[i][j] += detBE_over_24;
+                vecIntegA[j].push_back(vecIntegA[i][j]);
+            }
+        }
 
-	for(int i = 0; i < 3; i++)
-		for(int j = i; j < 3; j++)
-		{
-			vecIntegA[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) * rec_2detBE);
-			if(i == j)
-				vecIntegA[i][j] += detBE_over_12;
-			else{
-				vecIntegA[i][j] += detBE_over_24;
-				vecIntegA[j].push_back(vecIntegA[i][j]);
-			}
-		}
-
-	return vecIntegA;
+    return vecIntegA;
 }
 
 // calc \int_E f\phi
 // \int_E f\phi = |detB_E| / 6 * (\sum_{i=1}^3 f(m_i)\phi(m_i))
 // where m_i is the midpoint of each edge
-double FEMSolvingSystem::integARH(Element ele, Mesh mesh, int vi, Problem& prob)
+double FEMSolvingSystem::integARH(Element ele, Mesh mesh, int vi, Problem &prob)
 {
-	double x1(mesh.vertex[ele.vertex[vi] - 1].x), y1(mesh.vertex[ele.vertex[vi] - 1].y);
+    double x1(mesh.vertex[ele.vertex[vi] - 1].x), y1(mesh.vertex[ele.vertex[vi] - 1].y);
 
-	// double a = 0;
-	// for(int i = 0; i < ele.vertex.size(); i++){
-	// 	if (i == vi)
-	// 		continue;
-	// 	a += prob.f((x1 + mesh.vertex[ele.vertex[i] - 1].x) / 2.0, (y1 + mesh.vertex[ele.vertex[i] - 1].y) / 2.0);
-	// }
+    // double a = 0;
+    // for(int i = 0; i < ele.vertex.size(); i++){
+    //  if (i == vi)
+    //      continue;
+    //  a += prob.f((x1 + mesh.vertex[ele.vertex[i] - 1].x) / 2.0, (y1 + mesh.vertex[ele.vertex[i] - 1].y) / 2.0);
+    // }
 
-	// return a * ele.detBE / 12.0;
+    // return a * ele.detBE / 12.0;
 
-	return prob.f(x1, y1) * ele.detBE / 6.0;
+    return prob.f(x1, y1) * ele.detBE / 6.0;
 }
 
-int FEMSolvingSystem::getStiff(Element& ele, Mesh &mesh, Problem& prob){
+int FEMSolvingSystem::getStiff(Element &ele, Mesh &mesh, Problem &prob)
+{
 
 #ifdef __FEMSOLVESYS_DEBUG_LV2
-	std::cout << " assemble element " << ele.index << std::endl;
-#endif	
+    std::cout << " assemble element " << ele.index << std::endl;
+#endif
 
-	VECMATRIX vecIntegA = integA(ele, mesh, prob);
-	for(int i = 0; i < ele.vertex.size(); i++){
-		if(mesh.vertex[ele.vertex[i] - 1].bctype > 0)
-			continue;
-		for(int j = 0; j < ele.vertex.size(); j++)
-		{
-			if(mesh.vertex[ele.vertex[j] - 1].bctype > 0)
-				continue;
-			this -> addToMA(vecIntegA[i][j], mesh.vertex[ele.vertex[i] - 1].dofIndex,
-				mesh.vertex[ele.vertex[j] - 1].dofIndex);
-// #ifdef __FEMSOLVESYS_DEBUG_LV2
-// 				std::cout << "  global " << ele.vertex[i] << " local " << i
-// 						  << " and global " << ele.vertex[j] << " local " << j
-// 						  << " integ = " << valIntegA << std::endl;
-// #endif
+    VECMATRIX vecIntegA = integA(ele, mesh, prob);
+    for (int i = 0; i < ele.vertex.size(); i++) {
+        if (mesh.vertex[ele.vertex[i] - 1].bctype > 0)
+            continue;
+        for (int j = 0; j < ele.vertex.size(); j++) {
+            if (mesh.vertex[ele.vertex[j] - 1].bctype > 0)
+                continue;
+            this -> addToMA(vecIntegA[i][j], mesh.vertex[ele.vertex[i] - 1].dofIndex,
+                            mesh.vertex[ele.vertex[j] - 1].dofIndex);
+            // #ifdef __FEMSOLVESYS_DEBUG_LV2
+            //              std::cout << "  global " << ele.vertex[i] << " local " << i
+            //                        << " and global " << ele.vertex[j] << " local " << j
+            //                        << " integ = " << valIntegA << std::endl;
+            // #endif
 
-		}
-	}
-	for(int i = 0; i < ele.vertex.size(); i++){
-		if(mesh.vertex[ele.vertex[i] - 1].bctype > 0)
-			continue;
-		double valIntegARH = integARH(ele, mesh, i, prob);
-		(this -> rh)[mesh.vertex[ele.vertex[i] - 1].dofIndex] += valIntegARH;
+        }
+    }
+    for (int i = 0; i < ele.vertex.size(); i++) {
+        if (mesh.vertex[ele.vertex[i] - 1].bctype > 0)
+            continue;
+        double valIntegARH = integARH(ele, mesh, i, prob);
+        (this -> rh)[mesh.vertex[ele.vertex[i] - 1].dofIndex] += valIntegARH;
 
-// #ifdef __FEMSOLVESYS_DEBUG_LV2
-// 		std::cout << "  global " << ele.vertex[i] << " local " << i
-// 				  << " rh" << mesh.vertex[ele.vertex[i] - 1].dofIndex
-// 				  << "= " << valIntegARH << std::endl;
-// 		std::cout << "  global " << ele.vertex[i] << " local " << i
-// 				  << " rh" << mesh.vertex[ele.vertex[i] - 1].dofIndex
-// 				  << "= " << (this -> rh)[mesh.vertex[ele.vertex[i] - 1].dofIndex] << std::endl;
-// #endif
-	}
-	return 0;
+        // #ifdef __FEMSOLVESYS_DEBUG_LV2
+        //      std::cout << "  global " << ele.vertex[i] << " local " << i
+        //                << " rh" << mesh.vertex[ele.vertex[i] - 1].dofIndex
+        //                << "= " << valIntegARH << std::endl;
+        //      std::cout << "  global " << ele.vertex[i] << " local " << i
+        //                << " rh" << mesh.vertex[ele.vertex[i] - 1].dofIndex
+        //                << "= " << (this -> rh)[mesh.vertex[ele.vertex[i] - 1].dofIndex] << std::endl;
+        // #endif
+    }
+    return 0;
 }
 
 int FEMSolvingSystem::retrive_dof_count_vertex_index(Mesh &mesh)
 {
-	int dof(0);
-	for(Vertex &iVer:mesh.vertex)
-	{
-		if(iVer.bctype == 0)
-			iVer.dofIndex = dof++;
-	}
+    int dof(0);
+    for (Vertex &iVer : mesh.vertex) {
+        if (iVer.bctype == 0)
+            iVer.dofIndex = dof++;
+    }
 
-	return dof;
+    return dof;
 }
 
-int FEMSolvingSystem::assembleStiff(Mesh &mesh, Problem& prob)
+int FEMSolvingSystem::assembleStiff(Mesh &mesh, Problem &prob)
 {
 
-	this -> dof = retrive_dof_count_vertex_index(mesh);
+    this -> dof = retrive_dof_count_vertex_index(mesh);
 
-	calcDetBEOnMesh(mesh);
+    calcDetBEOnMesh(mesh);
 
 #ifdef __FEMSOLVESYS_DEBUG
-	std::cout << "start forming system, dof = " << this -> dof << std::endl;
+    std::cout << "start forming system, dof = " << this -> dof << std::endl;
 #endif
-	clock_t t = clock();
+    clock_t t = clock();
 
-	this -> rh = new double [this -> dof];
-	memset(this -> rh, 0, (this -> dof) * sizeof(double));
-	this -> ma.resize(this -> dof);
+    this -> rh = new double [this -> dof];
+    memset(this -> rh, 0, (this -> dof) * sizeof(double));
+    this -> ma.resize(this -> dof);
 
-	for(std::vector<Element>::iterator it = mesh.element.begin();
-		it != mesh.element.end(); it++)
-	{
-		getStiff(*it, mesh, prob);
-	}
+    for (std::vector<Element>::iterator it = mesh.element.begin();
+            it != mesh.element.end(); it++) {
+        getStiff(*it, mesh, prob);
+    }
 
-	t = clock() - t;
+    t = clock() - t;
 
 #ifdef __FEMSOLVESYS_DEBUG
-	std::cout << "finish forming system, t = "
-			  << (double) t / CLOCKS_PER_SEC << "s"
-			  << std::endl << std::endl;
-#endif	
+    std::cout << "finish forming system, t = "
+              << (double) t / CLOCKS_PER_SEC << "s"
+              << std::endl << std::endl;
+#endif
 
-// #ifdef __FEMSOLVESYS_DEBUG_LV2
-// 	for(int i = 0; i < mesh.kidof; i++)
-// 	{
-// 		std::cout<<" ma[" << i << "]" << std::endl;
-// 		for(std::list<maColEle>::iterator it = this -> ma[i].begin();
-// 			it != this -> ma[i].end(); it++)
-// 			std::cout<<"    row " << it -> row << " value " << it -> value << std::endl;
-// 	}
-// #endif
+    // #ifdef __FEMSOLVESYS_DEBUG_LV2
+    //  for(int i = 0; i < mesh.kidof; i++)
+    //  {
+    //      std::cout<<" ma[" << i << "]" << std::endl;
+    //      for(std::list<maColEle>::iterator it = this -> ma[i].begin();
+    //          it != this -> ma[i].end(); it++)
+    //          std::cout<<"    row " << it -> row << " value " << it -> value << std::endl;
+    //  }
+    // #endif
 
-	return 0;
+    return 0;
 }
 
-int FEMSolvingSystem::consoleOutput(Mesh mesh, Problem& prob)
+int FEMSolvingSystem::consoleOutput(Mesh mesh, Problem &prob)
 {
-	std::vector<Vertex>::iterator it;
-	int k;
-	for(k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++){
-		if(it -> bctype == 0)
-		{
-			std::cout << it -> x << " " << it -> y << " " << this -> x[it -> dofIndex] << std::endl;
-		}
-		else
-			std::cout << it -> x << " " << it -> y << " " << prob.gd(it -> x, it -> y) << std::endl;
-	}
+    std::vector<Vertex>::iterator it;
+    int k;
+    for (k = 0, it = mesh.vertex.begin(); it != mesh.vertex.end(); it++) {
+        if (it -> bctype == 0) {
+            std::cout << it -> x << " " << it -> y << " " << this -> x[it -> dofIndex] << std::endl;
+        } else
+            std::cout << it -> x << " " << it -> y << " " << prob.gd(it -> x, it -> y) << std::endl;
+    }
 
-	return 0;
+    return 0;
 }
 
-int FEMSolvingSystem::fileOutput(Mesh mesh, Problem& prob)
+int FEMSolvingSystem::fileOutput(Mesh mesh, Problem &prob)
 {
-	std::ofstream fout((prob.parameters.meshFilename + ".output").c_str());
+    std::ofstream fout((prob.parameters.meshFilename + ".output").c_str());
 
-	for(Element iEle:mesh.element){
-		for(int iVer:iEle.vertex){
-			Vertex &iver = mesh.vertex[iVer - 1];
-			if(iver.bctype == 0)
-			{
-				fout << iver.x << " " << iver.y << " " << this -> x[iver.dofIndex] << std::endl;
-			}
-			else{
-				fout << iver.x << " " << iver.y << " " << prob.gd(iver.x, iver.y) << std::endl;
-			}
-		}
-	}
+    for (Element iEle : mesh.element) {
+        for (int iVer : iEle.vertex) {
+            Vertex &iver = mesh.vertex[iVer - 1];
+            if (iver.bctype == 0) {
+                fout << iver.x << " " << iver.y << " " << this -> x[iver.dofIndex] << std::endl;
+            } else {
+                fout << iver.x << " " << iver.y << " " << prob.gd(iver.x, iver.y) << std::endl;
+            }
+        }
+    }
 
-	return 0;		
+    return 0;
 }
 
 
-int FEMSolvingSystem::triOutput(Problem& prob, Mesh mesh)
+int FEMSolvingSystem::triOutput(Problem &prob, Mesh mesh)
 {
-	if(prob.parameters.printResults)
-		consoleOutput(mesh, prob);
-	if(prob.parameters.fprintResults)
-		fileOutput(mesh, prob);
-	if(prob.parameters.fprintMA)
-		this -> fileOutputMA(mesh, prob);
-	if(prob.parameters.fprintRH)
-		this -> fileOutputRH(mesh, prob);
-	if(prob.parameters.fprintTriplet)
-		this -> fileOutputTriplet(mesh, prob);
+    if (prob.parameters.printResults)
+        consoleOutput(mesh, prob);
+    if (prob.parameters.fprintResults)
+        fileOutput(mesh, prob);
+    if (prob.parameters.fprintMA)
+        this -> fileOutputMA(mesh, prob);
+    if (prob.parameters.fprintRH)
+        this -> fileOutputRH(mesh, prob);
+    if (prob.parameters.fprintTriplet)
+        this -> fileOutputTriplet(mesh, prob);
 
-	if(prob.parameters.cprintError)
-	{
-		double errL2(0), errH1(0);
-		computeError(mesh, prob, errL2, errH1);
-		std::cout << "error in L2 norm = " << errL2 << std::endl
-		          << "error in H1 norm = " << errH1 << std::endl;
-	}
+    if (prob.parameters.cprintError) {
+        double errL2(0), errH1(0);
+        computeError(mesh, prob, errL2, errH1);
+        std::cout << "error in L2 norm = " << errL2 << std::endl
+                  << "error in H1 norm = " << errH1 << std::endl;
+    }
 
-	return 0;
+    return 0;
 }
 
-void FEMSolvingSystem::computeError(Mesh mesh, Problem& prob, double& errL2, double& errH1)
+void FEMSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1)
 {
-	std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
+    std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 
-	errL2 = 0;
-	errH1 = 0;
-	for(Element iEle:mesh.element){
-		Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
-		Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
-		Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
-		double x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y), x3(v3.x), y3(v3.y);
-		double p1(0), p2(0), p3(0); 
-		double r1(0), r2(0), r3(0); 
-		if(v1.bctype == 0){
-			p1 = this -> x[v1.dofIndex];
-			r1 = prob.trueSol(x1, y1) - p1;
-		}
-		if(v2.bctype == 0){
-			p2 = this -> x[v2.dofIndex];
-			r2 = prob.trueSol(x2, y2) - p2;
-		}
-		if(v3.bctype == 0){
-			p3 = this -> x[v3.dofIndex];
-			r3 = prob.trueSol(x3, y3) - p3;
-		}
+    errL2 = 0;
+    errH1 = 0;
+    for (Element iEle : mesh.element) {
+        Vertex &v1 = mesh.vertex[iEle.vertex[0] - 1];
+        Vertex &v2 = mesh.vertex[iEle.vertex[1] - 1];
+        Vertex &v3 = mesh.vertex[iEle.vertex[2] - 1];
+        double x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y), x3(v3.x), y3(v3.y);
+        double p1(0), p2(0), p3(0);
+        double r1(0), r2(0), r3(0);
+        if (v1.bctype == 0) {
+            p1 = this -> x[v1.dofIndex];
+            r1 = prob.trueSol(x1, y1) - p1;
+        }
+        if (v2.bctype == 0) {
+            p2 = this -> x[v2.dofIndex];
+            r2 = prob.trueSol(x2, y2) - p2;
+        }
+        if (v3.bctype == 0) {
+            p3 = this -> x[v3.dofIndex];
+            r3 = prob.trueSol(x3, y3) - p3;
+        }
 
-		errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
-		
-		fout << v1.x << " " << v1.y << " " << r1 << std::endl;
-		fout << v2.x << " " << v2.y << " " << r2 << std::endl;
-		fout << v3.x << " " << v3.y << " " << r3 << std::endl;
+        errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
-		errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
-	    	      + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;
+        fout << v1.x << " " << v1.y << " " << r1 << std::endl;
+        fout << v2.x << " " << v2.y << " " << r2 << std::endl;
+        fout << v3.x << " " << v3.y << " " << r3 << std::endl;
 
-	}
-	errL2 = sqrt(errL2);
-	errH1 = sqrt(errH1);
+        errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
+                    + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;
+
+    }
+    errL2 = sqrt(errL2);
+    errH1 = sqrt(errH1);
 }
 
 #endif /* TRI_FEMSOLVESYS_H */
