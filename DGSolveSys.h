@@ -693,18 +693,13 @@ void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, doub
         double x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y), x3(v3.x), y3(v3.y);
         double p1(0), p2(0), p3(0);
         double r1(0), r2(0), r3(0);
-        // if (v1.bctype == 0) {
-            p1 = this -> x[iEle.dofIndex];
-            r1 = prob.trueSol(x1, y1) - p1;
-        // }
-        // if (v2.bctype == 0) {
-            p2 = this -> x[iEle.dofIndex + 1];
-            r2 = prob.trueSol(x2, y2) - p2;
-        // }
-        // if (v3.bctype == 0) {
-            p3 = this -> x[iEle.dofIndex + 2];
-            r3 = prob.trueSol(x3, y3) - p3;
-        // }
+
+        p1 = this -> x[iEle.dofIndex];
+        r1 = prob.trueSol(x1, y1) - p1;
+        p2 = this -> x[iEle.dofIndex + 1];
+        r2 = prob.trueSol(x2, y2) - p2;
+        p3 = this -> x[iEle.dofIndex + 2];
+        r3 = prob.trueSol(x3, y3) - p3;
 
         errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
