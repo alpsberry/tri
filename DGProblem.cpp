@@ -4,7 +4,7 @@ using std::cout;
 using std::endl;
 
 // read parameters from an input file
-int DGProblem::initProblem(int argc, char const *argv[])
+void DGProblem::initProblem(int argc, char const *argv[])
 {
     std::string paramFile;
     if ( argc < 2 ) {
@@ -16,11 +16,8 @@ int DGProblem::initProblem(int argc, char const *argv[])
     }
 
     std::ifstream fin(paramFile.c_str());
-
-    if (!fin) {
-        cout << "input file open error!" << endl;
-        return 1;
-    }
+    if (!fin)
+        throw std::runtime_error("input file open error!");
 
     std::string tempStr;
     fin >> parameters.meshFilename;
@@ -76,5 +73,4 @@ int DGProblem::initProblem(int argc, char const *argv[])
          << " beta0 = " << beta0 << endl
          << " refinement level = " << parameters.nRefine << endl;
 
-    return 0;
 }

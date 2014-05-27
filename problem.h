@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 
 struct Vertex{
 	int index;
@@ -85,7 +86,7 @@ public:
 
 	virtual double trueSol(double x, double y){ return 0; }
 
-	virtual int initProblem(int argc, char const *argv[]) = 0;
+	virtual void initProblem(int argc, char const *argv[]) = 0;
 
 };
 
