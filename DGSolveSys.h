@@ -36,7 +36,7 @@ class DGSolvingSystem: public BasicSolvingSystem {
     int edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M11, std::vector<double> &rhs);
     int assembleEdge(Edge edge, Mesh mesh, Problem &prob);
 
-    void computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1); // compute error in L2 and H1 norm
+    void computeError(Mesh mesh, Problem &prob, double &errL2, double &errH0); // compute error in L2 and H0 norm
 
     int consoleOutput(Mesh mesh, Problem &prob);  // output the result in console
     int fileOutput(Mesh mesh, Problem &prob);     // output the result in file *.output
@@ -85,11 +85,11 @@ vector< vector<double> > DGSolvingSystem::elementInteg(Element ele, Mesh mesh)
         for (int j = i; j < 3; j++) {
             vecElementInteg[i].push_back( innerProduct(vecGrad[i], vecGrad[j]) / ele.detBE / 2.0);
             if (i != j) {
-                // vecElementInteg[i][j] += ele.detBE / 24; // alpha = 0, so this term is omitted
+                // vecElementInteg[i][j] += ele.detBE / 24.0; // comment this line to set alpha = 0, so this term is omitted
                 vecElementInteg[j].push_back(vecElementInteg[i][j]);
             }
             // else {
-            //     vecElementInteg[i][j] += ele.detBE / 12; // alpha = 0, so this term is omitted
+            //     vecElementInteg[i][j] += ele.detBE / 12.0; // comment this line to set alpha = 0, so this term is omitted
             // }
         }
 
@@ -382,16 +382,16 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
            E2_y2(mesh.vertex[ E2.vertex[1] - 1].y),
            E2_y3(mesh.vertex[ E2.vertex[2] - 1].y);
 
-    vector<double> ne;
+    vector<double> ne; // actually n_e^* as in the report
     vector< vector<double> > f_E1, f_E2;
     calc_ne_and_f_on_edge(edge, mesh, ne, f_E1, f_E2); // normal vector, not unit, actualy |e| / 4 * n_e
 
-    vector<double> grad_ne_E1;
+    vector<double> grad_ne_E1; // \nabla \phi_i^{E_1} \cdot n_e^*
     grad_ne_E1.push_back( ((E1_y2 - E1_y3) * ne[0] + (E1_x3 - E1_x2) * ne[1]) / E1.detBE );
     grad_ne_E1.push_back( ((E1_y3 - E1_y1) * ne[0] + (E1_x1 - E1_x3) * ne[1]) / E1.detBE );
     grad_ne_E1.push_back( ((E1_y1 - E1_y2) * ne[0] + (E1_x2 - E1_x1) * ne[1]) / E1.detBE );
 
-    vector<double> grad_ne_E2;
+    vector<double> grad_ne_E2; // \nabla \phi_i^{E_2} \cdot n_e^*
     grad_ne_E2.push_back( ((E2_y2 - E2_y3) * ne[0] + (E2_x3 - E2_x2) * ne[1]) / E2.detBE );
     grad_ne_E2.push_back( ((E2_y3 - E2_y1) * ne[0] + (E2_x1 - E2_x3) * ne[1]) / E2.detBE );
     grad_ne_E2.push_back( ((E2_y1 - E2_y2) * ne[0] + (E2_x2 - E2_x1) * ne[1]) / E2.detBE );
@@ -643,11 +643,11 @@ int DGSolvingSystem::fileOutput(Mesh mesh, Problem &prob)
         }
         k = 0;
         for (int ver : it -> vertex) {
-            if (mesh.vertex[ver - 1].bctype == 0)
+            // if (mesh.vertex[ver - 1].bctype == 0)
                 fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
-            else
-                fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " "
-                     << prob.gd(mesh.vertex[ver - 1].x, mesh.vertex[ver - 1].y) << std::endl;
+            // else
+            //     fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " "
+            //          << prob.gd(mesh.vertex[ver - 1].x, mesh.vertex[ver - 1].y) << std::endl;
         }
     }
 
@@ -669,21 +669,21 @@ int DGSolvingSystem::triOutput(Problem &prob, Mesh mesh)
         this -> fileOutputTriplet(mesh, prob);
 
     if (prob.parameters.cprintError) {
-        double errL2(0), errH1(0);
-        computeError(mesh, prob, errL2, errH1);
+        double errL2(0), errH0(0);
+        computeError(mesh, prob, errL2, errH0);
         std::cout << "error in L2 norm = " << errL2 << std::endl
-                  << "error in H1 norm = " << errH1 << std::endl;
+                  << "error in H1 norm = " << errH0 << std::endl;
     }
 
     return 0;
 }
 
-void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1)
+void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, double &errH0)
 {
     std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 
     errL2 = 0;
-    errH1 = 0;
+    errH0 = 0;
     for (Element iEle : mesh.element) {
         if (iEle.reftype != constNonrefined)
             continue;
@@ -693,18 +693,18 @@ void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, doub
         double x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y), x3(v3.x), y3(v3.y);
         double p1(0), p2(0), p3(0);
         double r1(0), r2(0), r3(0);
-        if (v1.bctype == 0) {
+        // if (v1.bctype == 0) {
             p1 = this -> x[iEle.dofIndex];
             r1 = prob.trueSol(x1, y1) - p1;
-        }
-        if (v2.bctype == 0) {
+        // }
+        // if (v2.bctype == 0) {
             p2 = this -> x[iEle.dofIndex + 1];
             r2 = prob.trueSol(x2, y2) - p2;
-        }
-        if (v3.bctype == 0) {
+        // }
+        // if (v3.bctype == 0) {
             p3 = this -> x[iEle.dofIndex + 2];
             r3 = prob.trueSol(x3, y3) - p3;
-        }
+        // }
 
         errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
@@ -712,11 +712,11 @@ void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, doub
              << v2.x << " " << v2.y << " " << r2 << endl
              << v3.x << " " << v3.y << " " << r3 << endl;
 
-        errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
+        errH0 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
                     + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;
     }
     errL2 = sqrt(errL2);
-    errH1 = sqrt(errH1);
+    errH0 = sqrt(errH0);
 }
 
 #endif /* TRI_DGSOLVESYS_H */
