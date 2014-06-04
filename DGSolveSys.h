@@ -36,13 +36,13 @@ class DGSolvingSystem: public BasicSolvingSystem {
     int edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M11, std::vector<double> &rhs);
     int assembleEdge(Edge edge, Mesh mesh, Problem &prob);
 
-    void computeError(Mesh mesh, Problem &prob, double &errL2, double &errH0); // compute error in L2 and H0 norm
+    void computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1); // compute error in L2 and H1 norm
 
     int consoleOutput(Mesh mesh, Problem &prob);  // output the result in console
     int fileOutput(Mesh mesh, Problem &prob);     // output the result in file *.output
 public:
     int assembleStiff(Mesh &mesh, Problem &prob); // list-stored stiffness matrix saved in ma
-    int triOutput(Problem &prob, Mesh mesh);      // output the result
+    int triOutput(Mesh mesh, Problem &prob);      // output the result
 };
 
 
@@ -144,6 +144,7 @@ double DGSolvingSystem::dist(double x1, double y1, double x2, double y2)
 {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
+
 int DGSolvingSystem::vertexOnEdge(Vertex ver, Vertex v1, Vertex v2)
 {
     double A = v2.y - v1.y;
@@ -468,7 +469,7 @@ int DGSolvingSystem::edgeInteg(Edge edge, Mesh mesh, Problem &prob, VECMATRIX &M
 
     initM(M11, E1.localDof);
     const double eps = prob.epsilon;
-    
+
     // M11
     getMii(mesh, edge, M11, E1, E1, f_E1, f_E1, eps, ne, grad_ne_E1, grad_ne_E1, -1, 1, 1);
 
@@ -644,7 +645,7 @@ int DGSolvingSystem::fileOutput(Mesh mesh, Problem &prob)
         k = 0;
         for (int ver : it -> vertex) {
             // if (mesh.vertex[ver - 1].bctype == 0)
-                fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
+            fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " " << this -> x[it -> dofIndex + (k++)] << std::endl;
             // else
             //     fout << mesh.vertex[ver - 1].x << " " << mesh.vertex[ver - 1].y << " "
             //          << prob.gd(mesh.vertex[ver - 1].x, mesh.vertex[ver - 1].y) << std::endl;
@@ -655,7 +656,7 @@ int DGSolvingSystem::fileOutput(Mesh mesh, Problem &prob)
     return 0;
 }
 
-int DGSolvingSystem::triOutput(Problem &prob, Mesh mesh)
+int DGSolvingSystem::triOutput(Mesh mesh, Problem &prob)
 {
     if (prob.parameters.printResults)
         consoleOutput(mesh, prob);
@@ -669,21 +670,21 @@ int DGSolvingSystem::triOutput(Problem &prob, Mesh mesh)
         this -> fileOutputTriplet(mesh, prob);
 
     if (prob.parameters.cprintError) {
-        double errL2(0), errH0(0);
-        computeError(mesh, prob, errL2, errH0);
+        double errL2(0), errH1(0);
+        computeError(mesh, prob, errL2, errH1);
         std::cout << "error in L2 norm = " << errL2 << std::endl
-                  << "error in H1 norm = " << errH0 << std::endl;
+                  << "error in H1 norm = " << errH1 << std::endl;
     }
 
     return 0;
 }
 
-void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, double &errH0)
+void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, double &errH1)
 {
     std::ofstream fout((prob.parameters.meshFilename + ".err").c_str());
 
     errL2 = 0;
-    errH0 = 0;
+    errH1 = 0;
     for (Element iEle : mesh.element) {
         if (iEle.reftype != constNonrefined)
             continue;
@@ -694,24 +695,29 @@ void DGSolvingSystem::computeError(Mesh mesh, Problem &prob, double &errL2, doub
         double p1(0), p2(0), p3(0);
         double r1(0), r2(0), r3(0);
 
-        p1 = this -> x[iEle.dofIndex];
-        r1 = prob.trueSol(x1, y1) - p1;
-        p2 = this -> x[iEle.dofIndex + 1];
-        r2 = prob.trueSol(x2, y2) - p2;
-        p3 = this -> x[iEle.dofIndex + 2];
-        r3 = prob.trueSol(x3, y3) - p3;
-
+        if (v1.bctype > 0) {
+            p1 = this -> x[iEle.dofIndex];
+            r1 = prob.trueSol(x1, y1) - p1;
+        }
+        if (v2.bctype > 0) {
+            p2 = this -> x[iEle.dofIndex + 1];
+            r2 = prob.trueSol(x2, y2) - p2;
+        }
+        if (v3.bctype > 0) {
+            p3 = this -> x[iEle.dofIndex + 2];
+            r3 = prob.trueSol(x3, y3) - p3;
+        }
         errL2 += (r1 * r1 + r2 * r2 + r3 * r3) * iEle.detBE / 6.0;
 
         fout << v1.x << " " << v1.y << " " << r1 << endl
              << v2.x << " " << v2.y << " " << r2 << endl
              << v3.x << " " << v3.y << " " << r3 << endl;
 
-        errH0 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
+        errH1 += (  pow(r1 * (y2 - y3), 2) + pow(r2 * (y3 - y1), 2) + pow(r3 * (y1 - y2), 2)
                     + pow(r1 * (x3 - x2), 2) + pow(r2 * (x1 - x3), 2) + pow(r3 * (x2 - x1), 2)  ) / 2.0 / iEle.detBE;
     }
     errL2 = sqrt(errL2);
-    errH0 = sqrt(errH0);
+    errH1 = sqrt(errH1);
 }
 
 #endif /* TRI_DGSOLVESYS_H */
