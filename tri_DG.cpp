@@ -2,17 +2,15 @@
 
 int main(int argc, char const *argv[])
 {
-    DGProblem prob;
-    Mesh mesh;
-    DGSolvingSystem solSys;
     try {
-        prob.initProblem(argc, argv);
-        mesh.initMesh(prob);
+        DGProblem prob(argc, argv);
+        Mesh mesh(prob);
 
+        DGSolvingSystem solSys;
         solSys.assembleStiff(mesh, prob);
         solSys.solveSparse(mesh, prob);
-        solSys.triOutput(prob, mesh);
-        
+        solSys.triOutput(mesh, prob);
+
     } catch (std::runtime_error &e) {
         cout << e.what() << endl;
     }

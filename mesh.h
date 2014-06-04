@@ -20,9 +20,54 @@ class Mesh : public Region {
     void printEdge();
     void printElement();
 public:
-    int initMesh(Problem &prob);
+    Mesh(Problem &prob);
 
 };
+
+Mesh::Mesh(Problem &prob)
+{
+    try {
+#ifdef __MESH_DEBUG
+        std::cout << "start initializing mesh" << std::endl;
+#endif
+
+        initEdge(prob);
+#ifdef __MESH_DEBUG
+        std::cout << " edge initialized" << std::endl;
+#endif
+
+        initElement(prob);
+#ifdef __MESH_DEBUG
+        std::cout << " element initialized" << std::endl;
+#endif
+
+        initVertex(prob);
+#ifdef __MESH_DEBUG
+        std::cout << " vertex initialized" << std::endl;
+#endif
+        findElementEdge(0);
+
+        if (prob.parameters.nRefine > 0) {
+            readRefinement(prob);
+#ifdef __MESH_DEBUG
+            std::cout << " refinement initialized" << std::endl;
+#endif
+        }
+
+#ifdef __MESH_DEBUG
+        std::cout << "finish initializing mesh" << std::endl << std::endl;
+#endif
+
+        if (prob.parameters.cprintMeshInfo) {
+            printVertex();
+            printEdge();
+            printElement();
+        }
+    } catch (std::runtime_error &e) {
+        throw e;
+    }
+
+}
 
 int Mesh::initElement(Problem &prob)
 {
@@ -215,51 +260,6 @@ void Mesh::findElementEdge(int previousLevelElementSize)
             }
         }
     }
-}
-
-int Mesh::initMesh(Problem &prob)
-{
-    try {
-#ifdef __MESH_DEBUG
-        std::cout << "start initializing mesh" << std::endl;
-#endif
-
-        initEdge(prob);
-#ifdef __MESH_DEBUG
-        std::cout << " edge initialized" << std::endl;
-#endif
-
-        initElement(prob);
-#ifdef __MESH_DEBUG
-        std::cout << " element initialized" << std::endl;
-#endif
-
-        initVertex(prob);
-#ifdef __MESH_DEBUG
-        std::cout << " vertex initialized" << std::endl;
-#endif
-        findElementEdge(0);
-
-        if (prob.parameters.nRefine > 0)
-            readRefinement(prob);
-#ifdef __MESH_DEBUG
-        std::cout << " refinement initialized" << std::endl;
-#endif
-
-#ifdef __MESH_DEBUG
-        std::cout << "finish initializing mesh" << std::endl << std::endl;
-#endif
-
-        if (prob.parameters.cprintMeshInfo) {
-            printVertex();
-            printEdge();
-            printElement();
-        }
-    } catch (std::runtime_error &e) {
-        throw e;
-    }
-
-    return 0;
 }
 
 void Mesh::printVertex()

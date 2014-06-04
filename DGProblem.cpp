@@ -4,7 +4,7 @@ using std::cout;
 using std::endl;
 
 // read parameters from an input file
-void DGProblem::initProblem(int argc, char const *argv[])
+DGProblem::DGProblem(int argc, char const *argv[])
 {
     std::string paramFile;
     if ( argc < 2 ) {
@@ -72,5 +72,4 @@ void DGProblem::initProblem(int argc, char const *argv[])
          << " sigma0 = " << sigma0 << endl
          << " beta0 = " << beta0 << endl
          << " refinement level = " << parameters.nRefine << endl;
-
 }
