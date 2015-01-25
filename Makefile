@@ -1,5 +1,4 @@
 CC = clang++
-#CFLAGS = -Wall -O2
 CFLAGS = -std=c++11 -Wall
 # compile with both UMFPACK and SuperLU 
 LDFLAGS =  -lumfpack -lamd -lsuitesparseconfig -lcholmod -lcolamd  -framework Accelerate ../SuperLU_4.3/lib/libblas.a ../SuperLU_4.3/lib/libsuperlu_4.3.a
@@ -8,34 +7,32 @@ LDFLAGS =  -lumfpack -lamd -lsuitesparseconfig -lcholmod -lcolamd  -framework Ac
 # compile with SuperLU4.3
 # LDFLAGS =  ../SuperLU_4.3/lib/libblas.a ../SuperLU_4.3/lib/libsuperlu_4.3.a
 
-TRI_TARGET = tri
-TRIDG_TARGET = tri_DG
-
-TRI_SRCS = tri.cpp FEMProblem.cpp
-TRIDG_SRCS = tri_DG.cpp DGProblem.cpp
-
-TRI_OBJS = ${TRI_SRCS:.cpp=.o}
-TRIDG_OBJS = ${TRIDG_SRCS:.cpp=.o}
-
-CLEANFILES = 	$(TRI_OBJS) $(TRI_TARGET) $(TRIDG_OBJS) $(TRIDG_TARGET) 
-
-all: $(TRI_TARGET) $(TRIDG_TARGET)
+all: tri
 
 release:
 	(make CFLAGS="-Wall -O2 -std=c++11" all;)
 
-$(TRI_TARGET): $(TRI_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(INCLDIRS)
+tri: main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o Problem.o
+	$(CC) $(CFLAGS) $(LDFLAGS) main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o Problem.o -o tri
 
-$(TRIDG_TARGET): $(TRIDG_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(INCLDIRS)
+main.o: main.cpp
+	$(CC) $(CFLAGS) -c main.cpp
 
+Mesh.o: Mesh.cpp
+	$(CC) $(CFLAGS) -c Mesh.cpp
 
-%.o: %.cpp
-	$(CC) $(CFLAGS) $(INCLDIRS) -c $<
+DGSolvingSystem.o: DGSolvingSystem.cpp
+	$(CC) $(CFLAGS) -c DGSolvingSystem.cpp
+
+Problem.o: Problem.cpp
+	$(CC) $(CFLAGS) -c Problem.cpp
+
+DGProblem.o: DGProblem.cpp
+	$(CC) $(CFLAGS) -c DGProblem.cpp
+
+BasicSolvingSystem.o: BasicSolvingSystem.cpp
+	$(CC) $(CFLAGS) -c BasicSolvingSystem.cpp
 
 clean:
-	rm -f $(CLEANFILES)
+	rm -rf *o tri
 
-tri.o: tri.h FEMSolveSys.h solveSys.h mesh.h problem.h FEMProblem.h
-tri_DG.o: tri_DG.h DGSolveSys.h solveSys.h mesh.h problem.h DGProblem.h
