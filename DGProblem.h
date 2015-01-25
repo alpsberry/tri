@@ -1,5 +1,13 @@
-#ifndef TRI_DGPROBLEM_H
-#define TRI_DGPROBLEM_H
+//
+//  DGProblem.h
+//  tri
+//
+//  Created by GBB on 26/12/14.
+//  Copyright (c) 2014 Xiaolin Guo. All rights reserved.
+//
+
+#ifndef __tri__DGProblem__
+#define __tri__DGProblem__
 
 #include <iostream>
 #include "problem.h"
@@ -11,7 +19,7 @@ class DGProblem: public Problem {
 public:
     // read parameters from an input file
     DGProblem(int argc, char const *argv[]);
-
+    
     // double f(double x, double y)
     // {
     //     return 2 * cos(x) * sin(y);
@@ -21,7 +29,7 @@ public:
     // {
     //     return cos(x) * sin(y);
     // }
-
+    
     double f(double x, double y)
     {
         return -1;
@@ -34,18 +42,6 @@ public:
     {
         return 0.25 * (x * x + y * y) + 2;
     }
-    // double f(double x, double y)
-    // {
-    //     return -1;
-    // }
-    // double gd(double x, double y)
-    // {
-    //     return 0.5 * (x - 1) * (x - 1) + 2;
-    // }
-    // double trueSol(double x, double y)
-    // {
-    //     return 0.5 * (x - 1) * (x - 1) + 2;
-    // }
 };
 
-#endif
+#endif /* defined(__tri__DGProblem__) */
