@@ -19,6 +19,10 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> Jan 25, 2014
+* Rewrote definitions of most classes
+* Temporarily removed the continuous FEM part which will be added after modification
+> 
 > May 27
 * throw exceptions to gain better control of runtime error
 * modified the output format in *.output
