@@ -15,7 +15,7 @@
 #include <vector>
 #include <list>
 #include "mesh.h"
-//#include "../SuperLU_4.3/SRC/slu_ddefs.h"
+// #include "../SuperLU_4.3/SRC/slu_ddefs.h"
 
 
 struct maColEle {
@@ -36,7 +36,7 @@ class BasicSolvingSystem {
 
     int convertToCSC(); // convert the list-stored matrix to CSC
     int UMFSolve();     // call UMFPACK to solve the sparse linear system
-    int SuperLUSolve(Mesh mesh); // call SuperLU to solve the sparse linear system
+    // int SuperLUSolve(Mesh mesh); // call SuperLU to solve the sparse linear system
     
     int fileOutputTriplet(); // file-output stiffness matrix in triplet format
     int fileOutputRH();      // file-output right-hand side vector
@@ -58,9 +58,9 @@ protected:
 public:
     int solveSparse(); // solve the sparse linear system
     virtual void output();
-    void virtual assembleStiff() = 0;
+    virtual void assembleStiff() = 0;
     
-//    ~BasicSolvingSystem() {}
+    virtual ~BasicSolvingSystem() {};
 };
 
 

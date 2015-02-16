@@ -20,10 +20,10 @@ bool maCompareFunc(const maColEle t1, const maColEle t2)
 int BasicSolvingSystem::solveSparse()
 {
     convertToCSC();
-   if (prob.parameters.solPack == SolPack::UMFPACK)
+   if (prob -> parameters.solPack == SolPack::UMFPACK)
         UMFSolve();
-   else if (prob.parameters.solPack == SolPack::SuperLU)
-       SuperLUSolve(mesh);
+   // else if (prob.parameters.solPack == SolPack::SuperLU)
+   //     SuperLUSolve(mesh);
 
     return 0;
 }
@@ -90,57 +90,57 @@ int BasicSolvingSystem::UMFSolve()
 //#endif
     return 0;
 }
-int BasicSolvingSystem::SuperLUSolve(Mesh mesh)
-{
+// int BasicSolvingSystem::SuperLUSolve(Mesh mesh)
+// {
 
-#ifdef __SOLVESYS_DEBUG
-   std::cout << "start solving with SuperLU" << std::endl;
-#endif
+// #ifdef __SOLVESYS_DEBUG
+//    std::cout << "start solving with SuperLU" << std::endl;
+// #endif
 
-   superlu_options_t options;
-   set_default_options(&options);
+//    superlu_options_t options;
+//    set_default_options(&options);
 
-   int nnz = Ap[dof];
+//    int nnz = Ap[dof];
 
-   SuperMatrix A, B;
-   dCreate_CompCol_Matrix(&A, dof, dof, nnz, Ax, Ai, Ap, SLU_NC, SLU_D, SLU_GE);
-   dCreate_Dense_Matrix(&B, dof, 1, rh, dof, SLU_DN, SLU_D, SLU_GE);
+//    SuperMatrix A, B;
+//    dCreate_CompCol_Matrix(&A, dof, dof, nnz, Ax, Ai, Ap, SLU_NC, SLU_D, SLU_GE);
+//    dCreate_Dense_Matrix(&B, dof, 1, rh, dof, SLU_DN, SLU_D, SLU_GE);
 
-   set_default_options(&options);
-   options.ColPerm = NATURAL;
+//    set_default_options(&options);
+//    options.ColPerm = NATURAL;
 
-   int      *perm_c; /* column permutation vector */
-   int      *perm_r; /* row permutations from partial pivoting */
-   if ( !(perm_c = intMalloc(dof)) ) ABORT("Malloc fails for perm_c[].");
-   if ( !(perm_r = intMalloc(dof)) ) ABORT("Malloc fails for perm_r[].");
+//    int      *perm_c; /* column permutation vector */
+//    int      *perm_r; /* row permutations from partial pivoting */
+//    if ( !(perm_c = intMalloc(dof)) ) ABORT("Malloc fails for perm_c[].");
+//    if ( !(perm_r = intMalloc(dof)) ) ABORT("Malloc fails for perm_r[].");
 
-   SuperMatrix L, U;
-   int info;
-   SuperLUStat_t stat;
-   StatInit(&stat);
+//    SuperMatrix L, U;
+//    int info;
+//    SuperLUStat_t stat;
+//    StatInit(&stat);
 
-   dgssv(&options, &A, perm_c, perm_r, &L, &U, &B, &stat, &info);
+//    dgssv(&options, &A, perm_c, perm_r, &L, &U, &B, &stat, &info);
 
-   double *sol = (double *) ((DNformat *) B.Store)->nzval;
-   x = new double [dof];
-   memcpy(x, sol, dof * sizeof(double));
+//    double *sol = (double *) ((DNformat *) B.Store)->nzval;
+//    x = new double [dof];
+//    memcpy(x, sol, dof * sizeof(double));
 
-   StatFree(&stat);
+//    StatFree(&stat);
 
-   SUPERLU_FREE (rh);
-   SUPERLU_FREE (perm_r);
-   SUPERLU_FREE (perm_c);
-   Destroy_CompCol_Matrix(&A);
-   Destroy_SuperMatrix_Store(&B);
-   Destroy_SuperNode_Matrix(&L);
-   Destroy_CompCol_Matrix(&U);
+//    SUPERLU_FREE (rh);
+//    SUPERLU_FREE (perm_r);
+//    SUPERLU_FREE (perm_c);
+//    Destroy_CompCol_Matrix(&A);
+//    Destroy_SuperMatrix_Store(&B);
+//    Destroy_SuperNode_Matrix(&L);
+//    Destroy_CompCol_Matrix(&U);
 
-#ifdef __SOLVESYS_DEBUG
-   std::cout << "finish solving with SuperLU" << std::endl << std::endl;
-#endif
+// #ifdef __SOLVESYS_DEBUG
+//    std::cout << "finish solving with SuperLU" << std::endl << std::endl;
+// #endif
 
-   return 0;
-}
+//    return 0;
+// }
 int BasicSolvingSystem::addToMA(double a, int row, int col)
 {
     if (a == 0) return 0;
