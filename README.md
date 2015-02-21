@@ -19,6 +19,9 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> Feb 21, 2015
+* Separated the sparse linear system solver with fem solving system
+> 
 > Jan 25, 2015
 * Rewrote definitions of most classes
 * Temporarily removed the continuous FEM part which will be added after modification
