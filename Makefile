@@ -12,8 +12,8 @@ all: tri
 release:
 	(make CFLAGS="-Wall -O2 -std=c++11" all;)
 
-tri: main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o Problem.o
-	$(CC) $(CFLAGS) $(LDFLAGS) main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o Problem.o -o tri
+tri: main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o Problem.o LinearSolver.o UMFPACKSolver.o SuperLUSolver.o
+	$(CC) $(CFLAGS) $(LDFLAGS) main.o Mesh.o DGSolvingSystem.o DGProblem.o BasicSolvingSystem.o LinearSolver.o UMFPACKSolver.o SuperLUSolver.o Problem.o -o tri
 
 main.o: main.cpp
 	$(CC) $(CFLAGS) -c main.cpp
@@ -32,6 +32,16 @@ DGProblem.o: DGProblem.cpp
 
 BasicSolvingSystem.o: BasicSolvingSystem.cpp
 	$(CC) $(CFLAGS) -c BasicSolvingSystem.cpp
+
+LinearSolver.o: LinearSolver.cpp
+	$(CC) $(CFLAGS) -c LinearSolver.cpp
+
+UMFPACKSolver.o: UMFPACKSolver.cpp
+	$(CC) $(CFLAGS) -c UMFPACKSolver.cpp	
+
+SuperLUSolver.o: SuperLUSolver.cpp
+	$(CC) $(CFLAGS) -c SuperLUSolver.cpp	
+
 
 clean:
 	rm -rf *o tri
