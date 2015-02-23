@@ -16,15 +16,12 @@
 #include "LinearSolver.h"
 #include "UMFPACKSolver.h"
 #include "SuperLUSolver.h"
+#include "SuperLUDISTSolver.h"
 
 typedef std::vector< std::vector<double> > VECMATRIX;
 
 class BasicSolvingSystem {
-    //for Compressed Sparse Column (CSC) format
-    int *Ap;    //Ap[0] = 0; Ap[k] num of nonzero entries in the first k columns
-    int *Ai;    //row of each nonzero entry, column-wise
-    double *Ax; //value of each nonzero entry, column-wise
-   
+  
     int fileOutputTriplet(); // file-output stiffness matrix in triplet format
     int fileOutputRH();      // file-output right-hand side vector
     int fileOutputMA();      // file-output stiffness matrix in CSC format
@@ -44,7 +41,7 @@ protected:
     int addToMA(double a, int row, int col); // add value to list-stored stiffness matrix ma
     
 public:
-    void solveSparse(); // solve the sparse linear system
+    virtual void solveSparse(); // solve the sparse linear system
     virtual void output();
     virtual void assembleStiff() = 0;
     

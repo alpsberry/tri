@@ -7,7 +7,6 @@
 //
 
 #include "BasicSolvingSystem.h"
-#include <umfpack.h>
 
 using namespace std;
 
@@ -73,24 +72,24 @@ int BasicSolvingSystem::fileOutputRH()
 }
 int BasicSolvingSystem::fileOutputMA()
 {
-    std::ofstream fout((prob->parameters.meshFilename + ".ma").c_str());
+    // std::ofstream fout((prob->parameters.meshFilename + ".ma").c_str());
 
-    for (int i = 0; i < ma.size() + 1; i++)
-        fout << Ap[i] << " ";
-    fout << std::endl;
+    // for (int i = 0; i < ma.size() + 1; i++)
+    //     fout << Ap[i] << " ";
+    // fout << std::endl;
 
-    int nnz(0);
-    for (std::vector< std::list<maColEle> >::iterator it = ma.begin();
-            it != ma.end(); it++)
-        nnz += it -> size();
+    // int nnz(0);
+    // for (std::vector< std::list<maColEle> >::iterator it = ma.begin();
+    //         it != ma.end(); it++)
+    //     nnz += it -> size();
 
-    for (int i = 0; i < nnz; i++)
-        fout << Ai[i] << " ";
-    fout << std::endl;
+    // for (int i = 0; i < nnz; i++)
+    //     fout << Ai[i] << " ";
+    // fout << std::endl;
 
-    for (int i = 0; i < nnz; i++)
-        fout << Ax[i] << " ";
-    fout << std::endl;
+    // for (int i = 0; i < nnz; i++)
+    //     fout << Ax[i] << " ";
+    // fout << std::endl;
 
     return 0;
 }
