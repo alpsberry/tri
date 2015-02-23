@@ -7,6 +7,7 @@
 //
 
 #include "SuperLUSolver.h"
+#include "../SuperLU_4.3/SRC/slu_ddefs.h"
 
 std::vector<double> SuperLUSolver::solveSparse()
 {

@@ -7,6 +7,7 @@
 //
 
 #include "UMFPACKSolver.h"
+#include <umfpack.h>
 
 std::vector<double> UMFPACKSolver::solveSparse()
 {

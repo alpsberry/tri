@@ -10,7 +10,6 @@
 #define __tri__SuperLUSolver__
 
 #include "LinearSolver.h"
-#include "../SuperLU_4.3/SRC/slu_ddefs.h"
 
 class SuperLUSolver: public LinearSolver
 {

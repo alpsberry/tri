@@ -10,7 +10,6 @@
 #define __tri__UMFPACKSolver__
 
 #include "LinearSolver.h"
-#include <umfpack.h>
 
 class UMFPACKSolver: public LinearSolver
 {
