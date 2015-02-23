@@ -11,6 +11,12 @@
 using std::vector;
 using std::cout;
 using std::endl;
+    
+DGSolvingSystem::DGSolvingSystem(Mesh* m, Problem* p):BasicSolvingSystem(m, p)
+{
+    //calc penalty
+    penaltyOver6 = prob->sigma0 / 6.0;
+}
 
 VECMATRIX DGSolvingSystem::elementInteg(Element ele)
 {
@@ -240,7 +246,7 @@ double DGSolvingSystem::innerProduct(vector<double> x, vector<double> y)
     return x[0] * y[0] + x[1] * y[1];
 }
 
-void initM(VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22, int dofE1, int dofE2)
+void DGSolvingSystem::initM(VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22, int dofE1, int dofE2)
 {
     M11.resize(dofE1);
     for (int i = 0; i != dofE1; ++i)
@@ -259,7 +265,7 @@ void initM(VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22, int d
         M22[i].resize(dofE2);
 }
 
-void initM(VECMATRIX &M11, int dofE1)
+void DGSolvingSystem::initM(VECMATRIX &M11, int dofE1)
 {
     M11.resize(dofE1);
     for (int i = 0; i != dofE1; ++i)
@@ -500,9 +506,6 @@ void DGSolvingSystem::assembleStiff()
     
     
     t = clock();
-    
-    //calc penalty
-    penaltyOver6 = prob->sigma0 / 6.0;
     
     // assemble edge integral related items
     k = 1;

@@ -17,7 +17,7 @@
 #include "DGProblem.h"
 
 class DGSolvingSystem: public BasicSolvingSystem {
-
+protected:
     const int LocalDimension = 3;
     double penaltyOver6;
     
@@ -34,6 +34,9 @@ class DGSolvingSystem: public BasicSolvingSystem {
     int calc_ne_and_f_on_edge(Edge edge, std::vector<double> &ne, VECMATRIX &integ_e);
     int calc_ne_and_f_on_edge(Edge edge, std::vector<double> &ne, VECMATRIX &f_E1, VECMATRIX &f_E2);
     
+    void initM(VECMATRIX &M11, VECMATRIX &M12, VECMATRIX &M21, VECMATRIX &M22, int dofE1, int dofE2);
+    void initM(VECMATRIX &M11, int dofE1);
+
     int getMii(Edge edge, VECMATRIX &M, Element E1, Element E2, VECMATRIX f_E1, VECMATRIX f_E2,
                double eps, std::vector<double> ne, std::vector<double> grad_ne_E1, std::vector<double> grad_ne_E2,
                int sign1, int sing2, int sing3);
@@ -47,7 +50,7 @@ class DGSolvingSystem: public BasicSolvingSystem {
     int consoleOutput();  // output the result in console
     int fileOutput();     // output the result in file *.output
 public:
-    DGSolvingSystem(Mesh* m, Problem* p):BasicSolvingSystem(m, p) {}
+    DGSolvingSystem(Mesh* m, Problem* p);
     void assembleStiff(); // list-stored stiffness matrix saved in ma
     void output();      // output the result
 };
