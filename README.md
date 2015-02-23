@@ -19,6 +19,10 @@ Generate square mesh with normalized triangulation and refinement: first go to /
 
 Changelog
 --------
+> Feb 24, 2015
+* tri now works in parallel, check by "make trimpi"
+* in DGSolvingSystemMPI, the stiff matrix is divided by row blocks, which consists with the data structure SuperLU_DIST uses, thus no explicit communication needed
+> 
 > Feb 21, 2015
 * Separated the sparse linear system solver with fem solving system
 > 
