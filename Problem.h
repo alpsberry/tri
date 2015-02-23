@@ -21,7 +21,7 @@
 const int constNonrefined = -1;
 
 enum class SolPack {
-    UMFPACK, SuperLU, Count
+    UMFPACK, SuperLU, SuperLUDist, Count
 };
 
 struct paramstruct {
