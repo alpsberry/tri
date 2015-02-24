@@ -92,10 +92,11 @@ for i in range(0, len(filenames)):
         proc = subprocess.Popen(["diff", backup_file_names[i], filenames[i]], stdout=tempf)
         proc.wait()
         tempf.seek(0)
-        if len(tempf.read()) == 0:
+        tr = tempf.read()
+        if len(tr) == 0:
             print "old and new " + filenames[i] + " are identical"
         else:
             print "change in " + filenames[i]
-            print tempf.read()
+            print tr
 
 delete_files(backup_file_names)
