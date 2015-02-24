@@ -16,7 +16,7 @@ void DGSolvingSystemMPI::solveSparse() // now only solve with SuperLUDist
 {
     LinearSolver *ls = nullptr;
     if (prob -> parameters.solPack == SolPack::SuperLUDist)
-        LinearSolver *ls = new SuperLUDISTSolver(ma, dof, rh, grid, m_loc, fst_row);
+        ls = new SuperLUDISTSolver(ma, dof, rh, grid, m_loc, fst_row);
     // else havent implemented yet, need to gather ma and rh in order to solve with non-distributed solver
 
     if (ls != nullptr)
